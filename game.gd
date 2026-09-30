@@ -8,6 +8,9 @@ const GRID_Y := 650.0
 const GRID_STEP := 100.0
 const MAX_LEVEL := 8
 const START_GOLD := 60
+const KIND_UNLOCK_WAVE := [1, 2, 4, 7]
+const KIND_WEIGHTS := [60.0, 25.0, 12.0, 5.0]
+
 
 var gold := START_GOLD
 var wave := 0
@@ -20,6 +23,7 @@ var over := false
 var slots: Array = []          # 9 entries: Tower or null
 var dragging: Tower = null
 var drag_from := -1
+
 
 var to_spawn := 0
 var spawn_timer := 0.0
@@ -226,29 +230,38 @@ func _start_wave() -> void:
 func _spawn_zombie() -> void:
 	var z := Zombie.new()
 	var boss := (wave % 5 == 0 and to_spawn == 1)
-	z.max_hp = 12.0 * pow(1.18, wave - 1)
-	z.speed = minf(45.0 + wave * 2.0, 110.0)
-	if boss:
-		z.max_hp *= 8.0
-		z.speed *= 0.6
-		z.radius = 34.0
-		z.is_boss = true
+	var kind := 5 if boss else _pick_kind()
+	var base_hp := 12.0 * pow(1.18, wave - 1)
+	var base_speed := minf(45.0 + wave * 2.0, 110.0)
+	z.setup(kind, base_hp, base_speed)
 	z.gate_y = GATE_Y
 	z.position = Vector2(LANE_X[randi() % 3], SPAWN_Y)
 	z.died.connect(_on_zombie_died)
 	z.reached_gate.connect(_on_gate_hit.bind(z))
 	add_child(z)
+	
+
+func _pick_kind() -> int:
+	var total := 0.0
+	for k in 4:
+		if wave >= KIND_UNLOCK_WAVE[k]:
+			total += KIND_WEIGHTS[k]
+	var roll := randf() * total
+	for k in 4:
+		if wave >= KIND_UNLOCK_WAVE[k]:
+			roll -= KIND_WEIGHTS[k]
+			if roll <= 0.0:
+				return k + 1
+	return 1
 
 func _on_zombie_died(z: Zombie) -> void:
 	kills += 1
-	var reward := 4.0 + wave * 0.5
-	if z.is_boss:
-		reward *= 5.0
+	var reward: float = (4.0 + wave * 0.5) * z.reward_mult
 	gold += int(round(reward * GameData.gold_mult()))
 	_update_ui()
 
 func _on_gate_hit(z: Zombie) -> void:
-	gate_hp -= 5 if z.is_boss else 1
+	gate_hp -= z.gate_damage
 	gate_hp = maxi(gate_hp, 0)
 	_update_ui()
 	if gate_hp <= 0:
