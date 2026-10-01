@@ -11,20 +11,22 @@ const DAMAGE_GROWTH := 2.4     # >2 so merging is always worth it
 const FIRE_RATE := 1.2         # shots per second
 const FIRERATE_GROWTH := 1.5   # not used yet (fire rate per level comes later)
 const TARGET_POOL := 15        # each tower picks randomly among the 15 front-most zombies
+const BOX_W := 50.0            # tower footprint on the ground
+const BOX_H := 42.0
 
 var level := 1
 var cooldown := 0.0
-var target: Zombie = null      # current locked target, kept until it dies
+var target: Zombie = null
 
 func damage() -> float:
 	return BASE_DAMAGE * pow(DAMAGE_GROWTH, level - 1) * GameData.damage_mult()
 
 func _process(delta: float) -> void:
+	queue_redraw()   # shape depends on position (also while dragging)
 	cooldown -= delta
 	if cooldown > 0.0:
 		return
 
-	# only pick a new target if we have none, or the old one died / reached the gate
 	if not is_instance_valid(target) or target.dead:
 		target = _pick_target()
 	if target == null:
@@ -41,7 +43,6 @@ func _pick_target() -> Zombie:
 	var zombies: Array = get_tree().get_nodes_in_group("zombies")
 	if zombies.is_empty():
 		return null
-	# closest to the gate first (largest y)
 	zombies.sort_custom(func(a, b): return a.position.y > b.position.y)
 	var pool_size := mini(TARGET_POOL, zombies.size())
 	return zombies[randi() % pool_size]
@@ -53,18 +54,15 @@ func pop() -> void:
 func _draw() -> void:
 	var col: Color = COLORS[clampi(level - 1, 0, COLORS.size() - 1)]
 
-	var shape := PackedVector2Array([
-		Vector2(-32, -40),  # top left
-		Vector2(32, -40),   # top right
-		Vector2(40, 40),    # bottom right
-		Vector2(-40, 40),   # bottom left
-	])
+	# same ground-plane shape as the slots, converted to local coordinates
+	var shape := PackedVector2Array()
+	for pt in Persp.ground_quad(position, BOX_W, BOX_H):
+		shape.append(pt - position)
 	draw_colored_polygon(shape, col)
-
-	# white outline (first point repeated to close the shape)
 	var outline := shape.duplicate()
 	outline.append(shape[0])
 	draw_polyline(outline, Color.WHITE, 3.0)
 
-	draw_string(ThemeDB.fallback_font, Vector2(-40, 12), str(level),
-		HORIZONTAL_ALIGNMENT_CENTER, 80, 36, Color.WHITE)
+	var s := Persp.scale_at(position.y)
+	draw_string(ThemeDB.fallback_font, Vector2(-40.0 * s, 12.0 * s), str(level),
+		HORIZONTAL_ALIGNMENT_CENTER, 80.0 * s, int(36.0 * s), Color.WHITE)

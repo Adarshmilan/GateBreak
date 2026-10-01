@@ -8,6 +8,7 @@ var target: Zombie
 var damage := 5.0
 
 func _process(delta: float) -> void:
+	scale = Vector2.ONE * Persp.scale_at(global_position.y)
 	if not is_instance_valid(target) or target.dead:
 		queue_free()
 		return

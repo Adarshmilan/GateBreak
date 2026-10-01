@@ -29,6 +29,8 @@ var to_spawn := 0
 var spawn_timer := 0.0
 var spawn_interval := 1.0
 var break_timer := 1.5
+const SLOT_W := 58.0
+const SLOT_H := 50.0
 
 var gold_label: Label
 var wave_label: Label
@@ -47,10 +49,11 @@ func _ready() -> void:
 
 # ---------------------------------------------------------------- helpers
 func slot_pos(i: int) -> Vector2:
-	return Vector2(LANE_X[i % 3], GRID_Y + (i / 3) * GRID_STEP)
+	var y := GRID_Y + (i / 3) * GRID_STEP
+	return Vector2(Persp.screen_x(LANE_X[i % 3], y), y)
 
 func tower_cost() -> int:
-	return 20 + 4 * towers_bought
+	return 20 + 2 * towers_bought
 
 func _slot_at(p: Vector2) -> int:
 	for i in 9:
@@ -58,18 +61,39 @@ func _slot_at(p: Vector2) -> int:
 			return i
 	return -1
 
-# ---------------------------------------------------------------- drawing
+func _road_edges(y: float) -> Vector2:
+	return Vector2(Persp.screen_x(0.0, y), Persp.screen_x(540.0, y))
+
 func _draw() -> void:
 	draw_rect(Rect2(0, 0, 540, 960), Color("1b1f2a"))
-	for i in 3:
-		var c := Color("242a38") if i % 2 == 0 else Color("2b3244")
-		draw_rect(Rect2(i * 180, 0, 180, GATE_Y), c)
-	draw_rect(Rect2(0, GATE_Y, 540, 24), Color("8b5a2b"))
-	draw_rect(Rect2(0, GATE_Y + 28, 540, 10), Color("401010"))
-	draw_rect(Rect2(0, GATE_Y + 28, 540.0 * float(gate_hp) / gate_max, 10), Color("e04040"))
-	for i in 9:
-		draw_rect(Rect2(slot_pos(i) - Vector2(46, 46), Vector2(92, 92)), Color("303850"))
 
+	# one ground plane, from the far top all the way to the bottom of the screen
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(Persp.screen_x(0.0, 0.0), 0.0), Vector2(Persp.screen_x(540.0, 0.0), 0.0),
+		Vector2(Persp.screen_x(540.0, 960.0), 960.0), Vector2(Persp.screen_x(0.0, 960.0), 960.0),
+	]), Color("242a38"))
+
+	# gate: a wall across the road
+	var g0 := _road_edges(GATE_Y)
+	var g1 := _road_edges(GATE_Y + 24.0)
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(g0.x, GATE_Y), Vector2(g0.y, GATE_Y),
+		Vector2(g1.y, GATE_Y + 24.0), Vector2(g1.x, GATE_Y + 24.0),
+	]), Color("8b5a2b"))
+
+	# gate health bar, same width as the road at that height
+	var hb := _road_edges(GATE_Y + 28.0)
+	var hw := hb.y - hb.x
+	draw_rect(Rect2(hb.x, GATE_Y + 28.0, hw, 10), Color("401010"))
+	draw_rect(Rect2(hb.x, GATE_Y + 28.0, hw * float(gate_hp) / gate_max, 10), Color("e04040"))
+
+	# tower slots lying on the same ground
+	for i in 9:
+		var q := Persp.ground_quad(slot_pos(i), SLOT_W, SLOT_H)
+		draw_colored_polygon(q, Color("303850"))
+		var o := q.duplicate()
+		o.append(q[0])
+		draw_polyline(o, Color("46506e"), 2.0)
 # ---------------------------------------------------------------- UI
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
@@ -234,8 +258,11 @@ func _spawn_zombie() -> void:
 	var base_hp := 12.0 * pow(1.18, wave - 1)
 	var base_speed := minf(45.0 + wave * 2.0, 110.0)
 	z.setup(kind, base_hp, base_speed)
+	var margin := z.radius / Persp.scale_at(GATE_Y) + 4.0
+	var lane_x := randf_range(margin, 540.0 - margin)
+	z.lane_x = lane_x
+	z.position = Vector2(Persp.screen_x(lane_x, SPAWN_Y), SPAWN_Y)
 	z.gate_y = GATE_Y
-	z.position = Vector2(LANE_X[randi() % 3], SPAWN_Y)
 	z.died.connect(_on_zombie_died)
 	z.reached_gate.connect(_on_gate_hit.bind(z))
 	add_child(z)
@@ -253,6 +280,10 @@ func _pick_kind() -> int:
 			if roll <= 0.0:
 				return k + 1
 	return 1
+
+
+
+# x of a lane boundary (0 to 3) at a given y
 
 func _on_zombie_died(z: Zombie) -> void:
 	kills += 1

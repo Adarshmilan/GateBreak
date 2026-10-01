@@ -2,6 +2,7 @@
 class_name Zombie
 extends Node2D
 
+
 signal died(zombie)
 signal reached_gate
 
@@ -27,7 +28,7 @@ var reward_mult := 1.0
 var body_color := Color("5c9a4a")
 var is_boss := false
 var dead := false
-
+var lane_x := 270.0     # the zombie's x at full size (set by game.gd)
 # Call this BEFORE add_child(): it applies the kind's stats to the base values.
 func setup(new_kind: int, base_hp: float, base_speed: float) -> void:
 	kind = clampi(new_kind, 1, KINDS.size())
@@ -42,6 +43,7 @@ func setup(new_kind: int, base_hp: float, base_speed: float) -> void:
 
 func _ready() -> void:
 	hp = max_hp
+	_update_scale()
 	add_to_group("zombies")
 
 func _process(delta: float) -> void:
@@ -50,6 +52,7 @@ func _process(delta: float) -> void:
 		if flash_frames == 0:
 			queue_redraw()   # go back to normal color
 	position.y += speed * delta
+	_update_scale() 
 	if position.y >= gate_y and not dead:
 		dead = true
 		remove_from_group("zombies")
@@ -69,6 +72,11 @@ func take_damage(amount: float) -> void:
 		position.y -= 1.5      # small push back = impact feel
 		flash_frames = 2       # bright for a frame or two
 		queue_redraw()
+
+func _update_scale() -> void:
+	# same camera as the ground; scale is exactly 1.0 when it reaches the gate
+	scale = Vector2.ONE * (Persp.scale_at(position.y) / Persp.scale_at(gate_y))
+	position.x = Persp.screen_x(lane_x, position.y)
 
 func _draw() -> void:
 	var col := body_color.lightened(0.6) if flash_frames > 0 else body_color
