@@ -6,14 +6,16 @@ const SPAWN_Y := 60.0
 const GATE_Y := 540.0
 const GRID_Y := 650.0
 const GRID_STEP := 100.0
-const MAX_LEVEL := 8
-const START_GOLD := 60
-const KIND_UNLOCK_WAVE := [1, 2, 4, 7]
-const KIND_WEIGHTS := [60.0, 25.0, 12.0, 5.0]
 
 
-var gold := START_GOLD
-var wave := 0
+var lvl := 1                   # level being played (from GameData.level)
+var assist_stacks := 0         # losses in a row -> easier zombies + more gold
+var assist := 0.0
+var gold := 0
+var wave := 0                  # 1..3 (current wave number)
+var elapsed := 0.0             # seconds since the round started
+var schedule: Array = []       # every zombie of this level, with its spawn time
+var spawn_i := 0
 var kills := 0
 var towers_bought := 0
 var gate_max := 10
@@ -24,28 +26,32 @@ var slots: Array = []          # 9 entries: Tower or null
 var dragging: Tower = null
 var drag_from := -1
 
-
-var to_spawn := 0
-var spawn_timer := 0.0
-var spawn_interval := 1.0
-var break_timer := 1.5
 const SLOT_W := 58.0
 const SLOT_H := 50.0
 
 var gold_label: Label
 var wave_label: Label
+var level_label: Label
+var time_label: Label
 var gate_label: Label
 var buy_btn: Button
 var banner: Label
 var over_panel: Control
 var over_label: Label
+var primary_btn: Button
 
 func _ready() -> void:
 	slots.resize(9)
-	gate_max = GameData.gate_hp()
+	lvl = GameData.level
+	assist_stacks = GameData.fail_streak
+	assist = LevelConfig.assist_amount(assist_stacks)
+	gold = LevelConfig.start_gold(lvl, assist_stacks)
+	gate_max = LevelConfig.gate_hp(lvl) + GameData.gate_bonus()
 	gate_hp = gate_max
+	_build_schedule()
 	_build_ui()
 	_update_ui()
+	_start_wave(1)
 
 # ---------------------------------------------------------------- helpers
 func slot_pos(i: int) -> Vector2:
@@ -53,7 +59,7 @@ func slot_pos(i: int) -> Vector2:
 	return Vector2(Persp.screen_x(LANE_X[i % 3], y), y)
 
 func tower_cost() -> int:
-	return 20 + 2 * towers_bought
+	return LevelConfig.tower_cost(lvl, towers_bought)
 
 func _slot_at(p: Vector2) -> int:
 	for i in 9:
@@ -99,9 +105,11 @@ func _build_ui() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
 
-	gold_label = _make_label(layer, Vector2(16, 8), 30)
-	wave_label = _make_label(layer, Vector2(200, 8), 30)
-	gate_label = _make_label(layer, Vector2(380, 8), 30)
+	gold_label = _make_label(layer, Vector2(16, 8), 28)
+	gate_label = _make_label(layer, Vector2(400, 8), 28)
+	level_label = _make_label(layer, Vector2(16, 44), 24)
+	wave_label = _make_label(layer, Vector2(190, 44), 24)
+	time_label = _make_label(layer, Vector2(400, 44), 24)
 
 	banner = _make_label(layer, Vector2(0, 250), 56)
 	banner.size = Vector2(540, 80)
@@ -127,20 +135,20 @@ func _build_ui() -> void:
 	over_label.size = Vector2(540, 200)
 	over_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
-	var retry := Button.new()
-	retry.text = "RETRY"
-	retry.position = Vector2(120, 520)
-	retry.size = Vector2(300, 80)
-	retry.add_theme_font_size_override("font_size", 32)
-	retry.pressed.connect(func(): get_tree().reload_current_scene())
-	over_panel.add_child(retry)
+	primary_btn = Button.new()
+	primary_btn.text = "RETRY"
+	primary_btn.position = Vector2(120, 520)
+	primary_btn.size = Vector2(300, 80)
+	primary_btn.add_theme_font_size_override("font_size", 32)
+	primary_btn.pressed.connect(func(): get_tree().reload_current_scene())
+	over_panel.add_child(primary_btn)
 
 	var menu := Button.new()
 	menu.text = "UPGRADES"
 	menu.position = Vector2(120, 630)
 	menu.size = Vector2(300, 80)
 	menu.add_theme_font_size_override("font_size", 32)
-	menu.pressed.connect(func(): get_tree().change_scene_to_file("res://menu.tscn"))
+	menu.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/menu.tscn"))
 	over_panel.add_child(menu)
 
 func _make_label(parent: Node, pos: Vector2, font_size: int) -> Label:
@@ -152,8 +160,11 @@ func _make_label(parent: Node, pos: Vector2, font_size: int) -> Label:
 
 func _update_ui() -> void:
 	gold_label.text = "G: %d" % gold
-	wave_label.text = "Wave %d" % wave
 	gate_label.text = "HP %d" % gate_hp
+	level_label.text = "Level %d" % lvl
+	wave_label.text = "Wave %d/%d" % [wave, LevelConfig.WAVES]
+	var left := maxi(0, int(ceil(LevelConfig.ROUND_TIME - elapsed)))
+	time_label.text = "%d:%02d" % [left / 60, left % 60]
 	buy_btn.text = "BUY TOWER (%dg)" % tower_cost()
 	buy_btn.disabled = gold < tower_cost()
 	queue_redraw()
@@ -215,7 +226,7 @@ func _drop() -> void:
 		slots[drag_from] = null
 		slots[j] = t
 		t.position = slot_pos(j)
-	elif other.level == t.level and t.level < MAX_LEVEL:
+	elif other.level == t.level and t.level < LevelConfig.MAX_TOWER_LEVEL:
 		slots[drag_from] = null
 		t.queue_free()
 		other.level += 1
@@ -227,37 +238,53 @@ func _drop() -> void:
 		other.position = slot_pos(drag_from)
 		t.position = slot_pos(j)
 
-# ---------------------------------------------------------------- waves
+# ---------------------------------------------------------------- level / waves
+# Build the whole level up front: 3 waves, each with its own zombie count, spread over its time window.
+func _build_schedule() -> void:
+	schedule.clear()
+	var wl := LevelConfig.wave_length()
+	var base_hp := LevelConfig.zombie_hp(lvl, assist)
+	var base_speed := LevelConfig.zombie_speed(lvl)
+	for w in LevelConfig.WAVES:
+		var is_final := (w == LevelConfig.WAVES - 1)
+		var c := LevelConfig.wave_count(lvl, w)
+		var bosses := LevelConfig.boss_count(lvl) if is_final else 0
+		for i in c:
+			var kind := 5 if i >= c - bosses else LevelConfig.pick_kind(lvl, is_final)
+			schedule.append({
+				"t": w * wl + (i + 0.5) / c * wl * LevelConfig.SPAWN_WINDOW,
+				"kind": kind,
+				"hp": base_hp * (LevelConfig.FINAL_WAVE_HP_MULT if is_final else 1.0),
+				"speed": base_speed * (LevelConfig.FINAL_WAVE_SPEED_MULT if is_final else 1.0),
+			})
+	schedule.sort_custom(func(a, b): return a["t"] < b["t"])
+
 func _process(delta: float) -> void:
 	if over:
 		return
-	if to_spawn > 0:
-		spawn_timer -= delta
-		if spawn_timer <= 0.0:
-			_spawn_zombie()
-			to_spawn -= 1
-			spawn_timer = spawn_interval
-	elif get_tree().get_nodes_in_group("zombies").is_empty():
-		break_timer -= delta
-		if break_timer <= 0.0:
-			_start_wave()
-
-func _start_wave() -> void:
-	wave += 1
-	to_spawn = 4 + wave * 2
-	spawn_interval = maxf(0.35, 1.0 - wave * 0.03)
-	spawn_timer = 0.0
-	break_timer = 2.5
-	_show_banner("WAVE %d" % wave)
+	elapsed += delta
+	var w := mini(int(elapsed / LevelConfig.wave_length()) + 1, LevelConfig.WAVES)
+	if w != wave:
+		_start_wave(w)
+	while spawn_i < schedule.size() and schedule[spawn_i]["t"] <= elapsed:
+		_spawn_zombie(schedule[spawn_i])
+		spawn_i += 1
+	if spawn_i >= schedule.size() and get_tree().get_nodes_in_group("zombies").is_empty():
+		_win()
 	_update_ui()
 
-func _spawn_zombie() -> void:
+func _start_wave(w: int) -> void:
+	wave = w
+	if w > 1:
+		# reward + a little repair between waves
+		gold += LevelConfig.wave_bonus_gold(lvl)
+		gate_hp = mini(gate_max, gate_hp + int(ceil(gate_max * LevelConfig.GATE_HEAL_BETWEEN_WAVES)))
+	_show_banner("FINAL WAVE!" if w == LevelConfig.WAVES else "WAVE %d" % w)
+	_update_ui()
+
+func _spawn_zombie(entry: Dictionary) -> void:
 	var z := Zombie.new()
-	var boss := (wave % 5 == 0 and to_spawn == 1)
-	var kind := 5 if boss else _pick_kind()
-	var base_hp := 12.0 * pow(1.18, wave - 1)
-	var base_speed := minf(45.0 + wave * 2.0, 110.0)
-	z.setup(kind, base_hp, base_speed)
+	z.setup(entry["kind"], entry["hp"], entry["speed"])
 	var margin := z.radius / Persp.scale_at(GATE_Y) + 4.0
 	var lane_x := randf_range(margin, 540.0 - margin)
 	z.lane_x = lane_x
@@ -266,28 +293,12 @@ func _spawn_zombie() -> void:
 	z.died.connect(_on_zombie_died)
 	z.reached_gate.connect(_on_gate_hit.bind(z))
 	add_child(z)
-	
-
-func _pick_kind() -> int:
-	var total := 0.0
-	for k in 4:
-		if wave >= KIND_UNLOCK_WAVE[k]:
-			total += KIND_WEIGHTS[k]
-	var roll := randf() * total
-	for k in 4:
-		if wave >= KIND_UNLOCK_WAVE[k]:
-			roll -= KIND_WEIGHTS[k]
-			if roll <= 0.0:
-				return k + 1
-	return 1
-
-
 
 # x of a lane boundary (0 to 3) at a given y
 
 func _on_zombie_died(z: Zombie) -> void:
 	kills += 1
-	var reward: float = (4.0 + wave * 0.5) * z.reward_mult
+	var reward: float = LevelConfig.kill_reward(lvl) * z.reward_mult
 	gold += int(round(reward * GameData.gold_mult()))
 	_update_ui()
 
@@ -298,11 +309,19 @@ func _on_gate_hit(z: Zombie) -> void:
 	if gate_hp <= 0:
 		_game_over()
 
+func _win() -> void:
+	over = true
+	var earned := LevelConfig.win_coins(lvl, kills)
+	GameData.complete_level(earned)
+	over_label.text = "LEVEL %d CLEARED!\n\nZombies killed: %d\nCoins earned: %d" % [lvl, kills, earned]
+	primary_btn.text = "NEXT LEVEL"
+	over_panel.visible = true
+
 func _game_over() -> void:
 	over = true
-	var earned := wave * 8 + kills / 4
-	GameData.coins += earned
-	GameData.best_wave = maxi(GameData.best_wave, wave)
-	GameData.save_game()
-	over_label.text = "THE GATE HAS FALLEN\n\nWave reached: %d\nZombies killed: %d\nCoins earned: %d" % [wave, kills, earned]
+	var share := float(wave) / LevelConfig.WAVES
+	var earned := int(LevelConfig.win_coins(lvl, kills) * LevelConfig.LOSE_COIN_FRACTION * share)
+	GameData.fail_level(earned)
+	over_label.text = "THE GATE HAS FALLEN\n\nLevel %d  -  reached wave %d/%d\nZombies killed: %d\nCoins earned: %d\n\nNext try gets a little help." % [lvl, wave, LevelConfig.WAVES, kills, earned]
+	primary_btn.text = "RETRY"
 	over_panel.visible = true

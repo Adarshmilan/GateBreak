@@ -8,6 +8,7 @@ const UPGRADES := {
 }
 
 var coins_label: Label
+var play_btn: Button
 var buttons := {}
 
 func _ready() -> void:
@@ -44,12 +45,11 @@ func _ready() -> void:
 		box.add_child(b)
 		buttons[key] = b
 
-	var play := Button.new()
-	play.text = "PLAY"
-	play.custom_minimum_size = Vector2(0, 100)
-	play.add_theme_font_size_override("font_size", 40)
-	play.pressed.connect(func(): get_tree().change_scene_to_file("res://game.tscn"))
-	box.add_child(play)
+	play_btn = Button.new()
+	play_btn.custom_minimum_size = Vector2(0, 100)
+	play_btn.add_theme_font_size_override("font_size", 40)
+	play_btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/game.tscn"))
+	box.add_child(play_btn)
 	_refresh()
 
 func _on_upgrade(key: String) -> void:
@@ -57,7 +57,8 @@ func _on_upgrade(key: String) -> void:
 	_refresh()
 
 func _refresh() -> void:
-	coins_label.text = "Coins: %d   |   Best Wave: %d" % [GameData.coins, GameData.best_wave]
+	coins_label.text = "Coins: %d   |   Best Level: %d" % [GameData.coins, GameData.best_level]
+	play_btn.text = "PLAY LEVEL %d" % GameData.level
 	for key in buttons.keys():
 		var lvl: int = GameData.upgrades[key]
 		var b: Button = buttons[key]
