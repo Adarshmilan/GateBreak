@@ -1,4 +1,4 @@
-# level_config.gd  (NEW FILE)  ->  res://scripts/core/level_config.gd
+# level_config.gd -> res://scripts/core/level_config.gd
 # Every number that controls level difficulty lives HERE. Change a constant, the whole game follows.
 # Nothing is capped by level: every function takes the level number L (1, 2, 3, ... forever).
 class_name LevelConfig
@@ -88,6 +88,7 @@ static func zombie_hp(level: int, assist: float = 0.0) -> float:
 static func zombie_speed(level: int) -> float:
 	return minf(BASE_SPEED + SPEED_GROWTH * (level - 1), SPEED_CAP)
 
+@warning_ignore("integer_division")
 static func boss_count(level: int) -> int:
 	if level < BOSS_FROM_LEVEL:
 		return 0
@@ -106,12 +107,14 @@ static func kill_reward(level: int) -> float:
 static func tower_cost(level: int, bought: int) -> int:
 	return int(TOWER_COST_BASE + TOWER_COST_PER_LEVEL * (level - 1) + TOWER_COST_STEP * bought)
 
+@warning_ignore("integer_division")
 static func gate_hp(level: int) -> int:
 	return int((GATE_BASE_HP + (level - 1) / GATE_HP_EVERY_N_LEVELS) * GATE_HP_MULT)
 
 static func assist_amount(stacks: int) -> float:
 	return ASSIST_PER_LOSS * mini(stacks, ASSIST_MAX_STACKS)
 
+@warning_ignore("integer_division")
 static func win_coins(level: int, kills: int) -> int:
 	return WIN_COINS_BASE + WIN_COINS_PER_LEVEL * level + kills / KILL_COINS_DIVISOR
 

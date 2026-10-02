@@ -1,4 +1,4 @@
-	# menu.gd -> attach to root Control node of menu.tscn (set as Main Scene)
+# menu.gd -> attach to root Control node of menu.tscn (set as Main Scene)
 extends Control
 
 const UPGRADES := {

@@ -1,4 +1,4 @@
-# perspective.gd -> one shared "camera" for the whole playfield
+# perspective.gd -> res://scripts/core/perspective.gd (one shared "camera" for the whole playfield)
 class_name Persp
 extends RefCounted
 

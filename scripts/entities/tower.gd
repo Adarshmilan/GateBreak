@@ -1,10 +1,11 @@
-# tower.gd -> no scene needed (created via Tower.new())
+# tower.gd -> res://scripts/entities/tower.gd (no scene needed, created via Tower.new())
 class_name Tower
 extends Node2D
 
 const COLORS := [
 	Color("6c9a5c"), Color("4a9fd8"), Color("8e6bd8"), Color("d86bb0"),
 	Color("e0a030"), Color("e06030"), Color("d83a3a"), Color("f0e060"),
+	Color("40d8c8"), Color("a0e050"), Color("f0f0f0"), Color("ff8ad8"),   # levels 9-12
 ]
 const BASE_DAMAGE := 6.0
 const DAMAGE_GROWTH := 2.4     # >2 so merging is always worth it
