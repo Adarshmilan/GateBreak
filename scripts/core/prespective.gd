@@ -3,7 +3,7 @@ class_name Persp
 extends RefCounted
 
 const CENTER_X := 270.0
-const HORIZON_Y := -400.0   # the vanishing point (above the screen). Closer to 0 = stronger 3D
+const HORIZON_Y := -550.0   # the vanishing point (above the screen). Closer to 0 = stronger 3D
 const REF_Y := 960.0        # screen y where things are drawn at scale 1.0
 
 # how big things look at a given screen height

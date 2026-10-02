@@ -17,6 +17,7 @@ var elapsed := 0.0             # seconds since the round started
 var schedule: Array = []       # every zombie of this level, with its spawn time
 var spawn_i := 0
 var kills := 0
+var gold_frac := 0.0           # fractional gold from small kill rewards
 var towers_bought := 0
 var gate_max := 10
 var gate_hp := 10
@@ -46,7 +47,7 @@ func _ready() -> void:
 	assist_stacks = GameData.fail_streak
 	assist = LevelConfig.assist_amount(assist_stacks)
 	gold = LevelConfig.start_gold(lvl, assist_stacks)
-	gate_max = LevelConfig.gate_hp(lvl) + GameData.gate_bonus()
+	gate_max = LevelConfig.gate_hp(lvl) + int(GameData.gate_bonus() * LevelConfig.GATE_HP_MULT)
 	gate_hp = gate_max
 	_build_schedule()
 	_build_ui()
@@ -299,7 +300,10 @@ func _spawn_zombie(entry: Dictionary) -> void:
 func _on_zombie_died(z: Zombie) -> void:
 	kills += 1
 	var reward: float = LevelConfig.kill_reward(lvl) * z.reward_mult
-	gold += int(round(reward * GameData.gold_mult()))
+	gold_frac += reward * GameData.gold_mult()
+	var gain := int(gold_frac)
+	gold_frac -= gain
+	gold += gain
 	_update_ui()
 
 func _on_gate_hit(z: Zombie) -> void:

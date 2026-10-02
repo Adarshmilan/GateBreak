@@ -10,6 +10,12 @@ const WAVES := 3                            # wave 3 is the FINAL wave
 const WAVE_SHARE := [0.25, 0.30, 0.45]      # share of the level's zombies in each wave (final = biggest)
 const SPAWN_WINDOW := 0.70                  # spawn during the first 70% of each wave, last 30% = breathing room
 
+# ============================================================ HORDE FEEL (the one knob for "many weak zombies")
+# Zombie count x HORDE_FACTOR, zombie HP and gold-per-kill / HORDE_FACTOR  ->  same total difficulty, more kills.
+# Set to 1.0 for the old few-tough-zombies feel, 4.0 for a huge swarm.
+const HORDE_FACTOR := 2.5
+const GATE_HP_MULT := 3.0                   # more zombies = more leaks, so the gate is tougher to match
+
 # ============================================================ HOW MANY ZOMBIES  (grows slowly, sub-linear)
 const BASE_COUNT := 14
 const COUNT_GROWTH := 1.7
@@ -62,7 +68,7 @@ const MAX_TOWER_LEVEL := 12
 # ============================================================ REWARDS (permanent coins)
 const WIN_COINS_BASE := 20
 const WIN_COINS_PER_LEVEL := 6
-const KILL_COINS_DIVISOR := 4               # +1 coin per 4 kills
+const KILL_COINS_DIVISOR := 10              # +1 coin per 10 kills (more kills now, so higher divisor)
 const LOSE_COIN_FRACTION := 0.5             # a lost round still pays 50% of the win payout (scaled by waves reached)
 
 
@@ -71,13 +77,13 @@ static func wave_length() -> float:
 	return ROUND_TIME / WAVES
 
 static func zombie_count(level: int) -> int:
-	return int(round(BASE_COUNT + COUNT_GROWTH * pow(level - 1, COUNT_EXP)))
+	return int(round((BASE_COUNT + COUNT_GROWTH * pow(level - 1, COUNT_EXP)) * HORDE_FACTOR))
 
 static func wave_count(level: int, wave_index: int) -> int:
 	return maxi(1, int(round(zombie_count(level) * WAVE_SHARE[wave_index])))
 
 static func zombie_hp(level: int, assist: float = 0.0) -> float:
-	return BASE_HP * pow(1.0 + HP_GROWTH * (level - 1), HP_EXP) * (1.0 - assist)
+	return BASE_HP * pow(1.0 + HP_GROWTH * (level - 1), HP_EXP) * (1.0 - assist) / HORDE_FACTOR
 
 static func zombie_speed(level: int) -> float:
 	return minf(BASE_SPEED + SPEED_GROWTH * (level - 1), SPEED_CAP)
@@ -95,13 +101,13 @@ static func wave_bonus_gold(level: int) -> int:
 	return int(start_gold(level) * WAVE_BONUS_FRACTION)
 
 static func kill_reward(level: int) -> float:
-	return KILL_REWARD_BASE + KILL_REWARD_PER_LEVEL * (level - 1)
+	return (KILL_REWARD_BASE + KILL_REWARD_PER_LEVEL * (level - 1)) / HORDE_FACTOR
 
 static func tower_cost(level: int, bought: int) -> int:
 	return int(TOWER_COST_BASE + TOWER_COST_PER_LEVEL * (level - 1) + TOWER_COST_STEP * bought)
 
 static func gate_hp(level: int) -> int:
-	return GATE_BASE_HP + (level - 1) / GATE_HP_EVERY_N_LEVELS
+	return int((GATE_BASE_HP + (level - 1) / GATE_HP_EVERY_N_LEVELS) * GATE_HP_MULT)
 
 static func assist_amount(stacks: int) -> float:
 	return ASSIST_PER_LOSS * mini(stacks, ASSIST_MAX_STACKS)
