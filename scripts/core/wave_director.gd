@@ -65,9 +65,17 @@ func _process(delta: float) -> void:
 	while spawn_i < schedule.size() and schedule[spawn_i]["t"] <= elapsed:
 		_spawn_zombie(schedule[spawn_i])
 		spawn_i += 1
-	if spawn_i >= schedule.size() and get_tree().get_nodes_in_group("zombies").is_empty():
+
+	var field_clear := get_tree().get_nodes_in_group("zombies").is_empty()
+	if spawn_i >= schedule.size() and field_clear:
 		running = false
 		cleared.emit()
+	elif wave < LevelConfig.WAVES and field_clear:
+		# this wave is fully spawned and killed -> jump straight to the next wave
+		var next_start := wave * LevelConfig.wave_length()
+		if spawn_i >= schedule.size() or schedule[spawn_i]["t"] >= next_start:
+			elapsed = next_start + 0.001   # tiny extra so the wave number can't round back down
+			_set_wave(wave + 1)
 
 
 func _set_wave(w: int) -> void:
@@ -78,7 +86,7 @@ func _set_wave(w: int) -> void:
 func _spawn_zombie(entry: Dictionary) -> void:
 	var z := Zombie.new()
 	z.setup(entry["kind"], entry["hp"], entry["speed"])
-	var margin := z.radius / Persp.scale_at(Arena.GATE_Y) + 4.0
+	var margin := z.radius / Persp.scale_at(Arena.GATE_Y) + 80.0
 	var lane_x := randf_range(margin, Arena.SCREEN_W - margin)
 	z.lane_x = lane_x
 	z.position = Vector2(Persp.screen_x(lane_x, Arena.SPAWN_Y), Arena.SPAWN_Y)

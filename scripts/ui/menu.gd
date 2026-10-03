@@ -12,6 +12,7 @@ var play_btn: Button
 var buttons := {}
 
 func _ready() -> void:
+	get_tree().paused = false
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
 	bg.color = Color("1b1f2a")

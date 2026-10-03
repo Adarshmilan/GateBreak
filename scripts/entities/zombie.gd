@@ -1,10 +1,12 @@
-# zombie.gd -> no scene needed (created via Zombie.new())
+# zombie.gd -> res://scripts/entities/zombie.gd (no scene needed, created via Zombie.new())
 class_name Zombie
 extends Node2D
 
 
 signal died(zombie)
-signal reached_gate
+signal reached_gate        # now fires on EVERY hit on the gate (once per ATTACK_INTERVAL), not once
+
+const ATTACK_INTERVAL := 1.0   # seconds between hits while the zombie stands at the gate
 
 # The ladder: each kind is bigger and tougher than the one before it.
 # hp / speed are multipliers on the wave-scaled base values.
@@ -28,6 +30,8 @@ var reward_mult := 1.0
 var body_color := Color("5c9a4a")
 var is_boss := false
 var dead := false
+var attacking := false   # true once it has reached the gate and stopped to hit it
+var attack_timer := 0.0
 var lane_x := 270.0     # the zombie's x at full size (set by game.gd)
 # Call this BEFORE add_child(): it applies the kind's stats to the base values.
 func setup(new_kind: int, base_hp: float, base_speed: float) -> void:
@@ -47,17 +51,28 @@ func _ready() -> void:
 	add_to_group("zombies")
 
 func _process(delta: float) -> void:
+	if dead:
+		return
 	if flash_frames > 0:
 		flash_frames -= 1
 		if flash_frames == 0:
 			queue_redraw()   # go back to normal color
+
+	if attacking:
+		# stand at the gate and hit it every ATTACK_INTERVAL seconds until killed
+		attack_timer -= delta
+		if attack_timer <= 0.0:
+			attack_timer += ATTACK_INTERVAL
+			reached_gate.emit()
+		return
+
 	position.y += speed * delta
-	_update_scale() 
-	if position.y >= gate_y and not dead:
-		dead = true
-		remove_from_group("zombies")
-		reached_gate.emit()
-		queue_free()
+	_update_scale()
+	if position.y >= gate_y:
+		position.y = gate_y
+		_update_scale()
+		attacking = true
+		attack_timer = ATTACK_INTERVAL   # first hit lands 1 second after arriving (set 0.0 for an instant hit)
 
 func take_damage(amount: float) -> void:
 	if dead:
@@ -69,7 +84,8 @@ func take_damage(amount: float) -> void:
 		died.emit(self)
 		queue_free()
 	else:
-		position.y -= 1.5      # small push back = impact feel
+		if not attacking:
+			position.y -= 1.5  # small push back = impact feel (not while it is hitting the gate)
 		flash_frames = 2       # bright for a frame or two
 		queue_redraw()
 
