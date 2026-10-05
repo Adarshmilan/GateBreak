@@ -22,6 +22,23 @@ var over_panel: Control
 var over_label: Label
 var primary_btn: Button
 const BUY_RECT := Rect2(120, 880, 300, 64)   # x, y, width, height
+const DEFEAT_SCALE := 0.87     # 1.0 = full image size; lower = smaller
+const DEFEAT_Y := 220.0        # top of the image on screen
+
+var defeat_art: Control
+var defeat_wave_label: Label
+var defeat_coin_label: Label
+var defeat_kill_label: Label
+const VICTORY_SCALE := 1.0     # 1.0 = full image size
+const VICTORY_Y := 170.0       # top of the image on screen
+# our button, in image pixels; it covers the green button drawn in the picture
+const VICTORY_BTN := Rect2(178, 322, 256, 58)
+
+var victory_art: Control
+var victory_kill_label: Label
+var victory_coin_label: Label
+var victory_level_label: Label
+var secondary_btn: Button
 
 
 
@@ -56,16 +73,20 @@ func _ready() -> void:
 	over_label = _make_label(over_panel, Vector2(0, 260), 40)
 	over_label.size = Vector2(540, 200)
 	over_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	
+	_build_defeat_art()
+	
+	_build_victory_art()
 
 	primary_btn = _make_button(over_panel, "RETRY", Vector2(120, 520), Vector2(300, 80))
-	var menu_btn := _make_button(over_panel, "UPGRADES", Vector2(120, 630), Vector2(300, 80))
+	secondary_btn = _make_button(over_panel, "UPGRADES", Vector2(120, 630), Vector2(300, 80))
 	_skin_button(primary_btn, BTN_NORMAL, BTN_PRESSED, BTN_DISABLE)
-	_skin_button(menu_btn, BTN_NORMAL, BTN_PRESSED, BTN_DISABLE)
+	_skin_button(secondary_btn, BTN_NORMAL, BTN_PRESSED, BTN_DISABLE)
 	
 	primary_btn.pressed.connect(func():
 		get_tree().paused = false
 		get_tree().reload_current_scene())
-	menu_btn.pressed.connect(func():
+	secondary_btn.pressed.connect(func():
 		get_tree().paused = false
 		get_tree().change_scene_to_file("res://scenes/menu.tscn"))
 
@@ -189,6 +210,75 @@ func refresh(gold: int, gate_hp: int, lvl: int, wave: int, secs_left: int, cost:
 	buy_btn.text = "BUY TOWER (%dg)" % cost
 	buy_btn.disabled = gold < cost
 
+func _build_victory_art() -> void:
+	victory_art = Control.new()
+	victory_art.visible = false
+	victory_art.size = Vector2(612, 408)                  # the image's own size
+	victory_art.scale = Vector2(VICTORY_SCALE, VICTORY_SCALE)
+	victory_art.position = Vector2((540.0 - 612.0 * VICTORY_SCALE) / 2.0, VICTORY_Y)
+	over_panel.add_child(victory_art)
+
+	var pic := TextureRect.new()
+	pic.texture = load(UI + "victory.png")
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	victory_art.add_child(pic)
+
+	# slot boxes in IMAGE pixels: Rect2(x, y, width, height)
+	victory_kill_label = _victory_stat(Rect2(121, 290, 100, 25))    # zombie killed
+	victory_coin_label = _victory_stat(Rect2(258, 290, 98, 25))     # coin earned
+	victory_level_label = _victory_stat(Rect2(395, 290, 98, 25))    # level
+
+
+func _victory_stat(rect: Rect2) -> Label:
+	var l := _bar_label(victory_art, rect, 20, HORIZONTAL_ALIGNMENT_CENTER)
+	l.add_theme_color_override("font_color", Color.WHITE)
+	l.add_theme_color_override("font_outline_color", Color(0.05, 0.07, 0.1))
+	l.add_theme_constant_override("outline_size", 5)
+	return l
+
+
+func show_victory(kills: int, coins: int, level: int) -> void:
+	show_result("", "NEXT LEVEL")
+	over_label.visible = false
+	victory_art.visible = true
+	victory_kill_label.text = str(kills)
+	victory_coin_label.text = str(coins)
+	victory_level_label.text = str(level)
+	# first button sits right over the button drawn in the image
+	primary_btn.position = victory_art.position + VICTORY_BTN.position * VICTORY_SCALE
+	primary_btn.size = VICTORY_BTN.size * VICTORY_SCALE
+	# second button just below the art
+	secondary_btn.position = Vector2(120, victory_art.position.y + 405.0 * VICTORY_SCALE)
+	secondary_btn.size = Vector2(300, 70)
+
+
+
+func _build_defeat_art() -> void:
+	defeat_art = Control.new()
+	defeat_art.visible = false
+	defeat_art.size = Vector2(866, 288)                 # the image's own size
+	defeat_art.scale = Vector2(DEFEAT_SCALE, DEFEAT_SCALE)
+	defeat_art.position = Vector2((540.0 - 866.0 * DEFEAT_SCALE) / 2.0, DEFEAT_Y)   # centered
+	over_panel.add_child(defeat_art)
+
+	var pic := TextureRect.new()
+	pic.texture = load(UI + "defeated.png")
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	defeat_art.add_child(pic)
+
+	# slot boxes in IMAGE pixels: Rect2(x, y, width, height)
+	defeat_wave_label = _defeat_stat(Rect2(245, 205, 83, 35))    # shield slot
+	defeat_coin_label = _defeat_stat(Rect2(410, 205, 82, 35))    # coin slot
+	defeat_kill_label = _defeat_stat(Rect2(577, 205, 88, 35))    # chest slot
+
+
+func _defeat_stat(rect: Rect2) -> Label:
+	var l := _bar_label(defeat_art, rect, 28, HORIZONTAL_ALIGNMENT_CENTER)
+	l.add_theme_color_override("font_color", Color.WHITE)
+	l.add_theme_color_override("font_outline_color", Color(0.05, 0.07, 0.1))
+	l.add_theme_constant_override("outline_size", 6)
+	return l
+
 
 func show_banner(text: String) -> void:
 	banner.text = text
@@ -198,5 +288,17 @@ func show_banner(text: String) -> void:
 
 func show_result(text: String, primary_text: String) -> void:
 	over_label.text = text
+	over_label.visible = true
+	defeat_art.visible = false
+	victory_art.visible = false
 	primary_btn.text = primary_text
 	over_panel.visible = true
+
+
+func show_defeat(wave: int, waves: int, kills: int, coins: int) -> void:
+	show_result("", "RETRY")
+	over_label.visible = false
+	defeat_art.visible = true
+	defeat_wave_label.text = "%d/%d" % [wave, waves]
+	defeat_coin_label.text = str(coins)
+	defeat_kill_label.text = str(kills)

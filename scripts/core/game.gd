@@ -129,7 +129,7 @@ func _win() -> void:
 	_end_round()
 	var earned := LevelConfig.win_coins(lvl, kills)
 	GameData.complete_level(earned)
-	hud.show_result("LEVEL %d CLEARED!\n\nZombies killed: %d\nCoins earned: %d" % [lvl, kills, earned], "NEXT LEVEL")
+	hud.show_victory(kills, earned, lvl)
 	get_tree().paused = true
 
 
@@ -140,5 +140,5 @@ func _game_over() -> void:
 	var share := float(director.wave) / LevelConfig.WAVES
 	var earned := int(LevelConfig.win_coins(lvl, kills) * LevelConfig.LOSE_COIN_FRACTION * share)
 	GameData.fail_level(earned)
-	hud.show_result("THE GATE HAS FALLEN\n\nLevel %d  -  reached wave %d/%d\nZombies killed: %d\nCoins earned: %d\n\nNext try gets a little help." % [lvl, director.wave, LevelConfig.WAVES, kills, earned], "RETRY")
+	hud.show_defeat(director.wave, LevelConfig.WAVES, kills, earned)
 	get_tree().paused = true
