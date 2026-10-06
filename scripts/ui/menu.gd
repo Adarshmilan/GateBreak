@@ -1,71 +1,27 @@
-# menu.gd -> attach to root Control node of menu.tscn (set as Main Scene)
+# menu.gd -> landing page (root Control of menu.tscn, the Main Scene)
 extends Control
 
-const UPGRADES := {
-	"damage": "Tower Damage (+10%)",
-	"gate": "Gate Health (+2)",
-	"gold": "Gold Earned (+10%)",
-}
+const UIKit := preload("res://scripts/ui/ui_kit.gd")
 
-var coins_label: Label
-var play_btn: Button
-var buttons := {}
+# Rect2(x, y, width, height) on the 540x960 screen (right of the zombie face)
+const INFO_RECT := Rect2(290, 520, 240, 64)
+const PLAY_RECT := Rect2(300, 550, 220, 76)
+const UPGRADE_RECT := Rect2(300, 637, 220, 76)
+
+var info_label: Label
+
 
 func _ready() -> void:
 	get_tree().paused = false
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var bg := ColorRect.new()
-	bg.color = Color("1b1f2a")
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	UIKit.add_background(self, 0.0)
 
-	var box := VBoxContainer.new()
-	box.set_anchors_preset(Control.PRESET_FULL_RECT)
-	box.offset_left = 40
-	box.offset_right = -40
-	box.offset_top = 80
-	box.add_theme_constant_override("separation", 20)
-	add_child(box)
+	info_label = UIKit.make_label(self, "", INFO_RECT, 20)
 
-	var title := Label.new()
-	title.text = "LAST GATE"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 64)
-	box.add_child(title)
-
-	coins_label = Label.new()
-	coins_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	coins_label.add_theme_font_size_override("font_size", 28)
-	box.add_child(coins_label)
-
-	for key in UPGRADES.keys():
-		var b := Button.new()
-		b.custom_minimum_size = Vector2(0, 80)
-		b.add_theme_font_size_override("font_size", 24)
-		b.pressed.connect(_on_upgrade.bind(key))
-		box.add_child(b)
-		buttons[key] = b
-
-	play_btn = Button.new()
-	play_btn.custom_minimum_size = Vector2(0, 100)
-	play_btn.add_theme_font_size_override("font_size", 40)
+	var play_btn := UIKit.make_button(self, "PLAY", PLAY_RECT, 32)
 	play_btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/game.tscn"))
-	box.add_child(play_btn)
-	_refresh()
 
-func _on_upgrade(key: String) -> void:
-	GameData.buy_upgrade(key)
-	_refresh()
+	var up_btn := UIKit.make_button(self, "UPGRADES", UPGRADE_RECT, 26)
+	up_btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/upgrades.tscn"))
 
-func _refresh() -> void:
-	coins_label.text = "Coins: %d   |   Best Level: %d" % [GameData.coins, GameData.best_level]
-	play_btn.text = "PLAY LEVEL %d" % GameData.level
-	for key in buttons.keys():
-		var lvl: int = GameData.upgrades[key]
-		var b: Button = buttons[key]
-		if lvl >= GameData.MAX_UPGRADE:
-			b.text = "%s  [MAX]" % UPGRADES[key]
-			b.disabled = true
-		else:
-			b.text = "%s  Lv %d  -  %d coins" % [UPGRADES[key], lvl, GameData.upgrade_cost(key)]
-			b.disabled = GameData.coins < GameData.upgrade_cost(key)
+	info_label.text = "Level %d   Best %d\nCoins: %d" % [GameData.level, GameData.best_level, GameData.coins]
