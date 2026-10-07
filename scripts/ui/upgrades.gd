@@ -4,9 +4,9 @@ extends Control
 const UIKit := preload("res://scripts/ui/ui_kit.gd")
 
 const UPGRADES := {
-	"damage": "Tower Damage (+10%)",
-	"gate": "Gate Health (+2)",
-	"gold": "Gold Earned (+10%)",
+	"damage": "Tower Damage +10%",
+	"gate": "Gate Health +2",
+	"gold": "Gold Earned +10%",
 }
 
 var coins_label: Label
@@ -23,12 +23,12 @@ func _ready() -> void:
 
 	var y := 280.0
 	for key in UPGRADES.keys():
-		var b := UIKit.make_button(self, "", Rect2(60, y, 420, 90), 22)
+		var b := UIKit.make_button(self, "", Vector2((540.0 - UIKit.BTN_SIZE.x) / 2.0, y), 18)
 		b.pressed.connect(_on_upgrade.bind(key))
 		buttons[key] = b
 		y += 110.0
 
-	var back := UIKit.make_button(self, "BACK", Rect2(150, 700, 240, 80), 30)
+	var back := UIKit.make_button(self, "BACK", Vector2((540.0 - UIKit.BTN_SIZE.x) / 2.0, 700))
 	back.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/menu.tscn"))
 	_refresh()
 
@@ -47,5 +47,5 @@ func _refresh() -> void:
 			b.text = "%s\nMAX" % UPGRADES[key]
 			b.disabled = true
 		else:
-			b.text = "%s\nLv %d  -  %d coins" % [UPGRADES[key], lvl, GameData.upgrade_cost(key)]
+			b.text = "%s\nLv %d - %d coins" % [UPGRADES[key], lvl, GameData.upgrade_cost(key)]
 			b.disabled = GameData.coins < GameData.upgrade_cost(key)

@@ -3,6 +3,12 @@ extends RefCounted
 
 const UI := "res://assets/UI/"
 
+# ONE size for every button in the game. Change it here and all buttons follow.
+const BTN_SIZE := Vector2(260, 80)
+const BTN_FONT := 26
+
+static var _style_cache := {}
+
 
 static func add_background(parent: Control, dim: float) -> void:
 	var bg := TextureRect.new()
@@ -20,31 +26,38 @@ static func add_background(parent: Control, dim: float) -> void:
 		parent.add_child(shade)
 
 
-static func skin_button(b: Button) -> void:
-	var make := func(file: String) -> StyleBoxTexture:
+static func _btn_style(file: String) -> StyleBoxTexture:
+	if not _style_cache.has(file):
+		var tex: Texture2D = load(UI + file)
 		var s := StyleBoxTexture.new()
-		s.texture = load(UI + file)
+		s.texture = tex
+		s.region_rect = Rect2(tex.get_image().get_used_rect())   # only the visible pixels
 		s.content_margin_left = 16
 		s.content_margin_right = 16
 		s.content_margin_top = 6
 		s.content_margin_bottom = 6
-		return s
-	b.add_theme_stylebox_override("normal", make.call("btn_normal.png"))
-	b.add_theme_stylebox_override("hover", make.call("btn_normal.png"))
-	b.add_theme_stylebox_override("pressed", make.call("btn_pressed.png"))
-	b.add_theme_stylebox_override("disabled", make.call("btn_disable.png"))
+		_style_cache[file] = s
+	return _style_cache[file]
+
+
+static func skin_button(b: Button) -> void:
+	b.add_theme_stylebox_override("normal", _btn_style("btn_normal.png"))
+	b.add_theme_stylebox_override("hover", _btn_style("btn_normal.png"))
+	b.add_theme_stylebox_override("pressed", _btn_style("btn_pressed.png"))
+	b.add_theme_stylebox_override("disabled", _btn_style("btn_disable.png"))
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 
 
-static func make_button(parent: Node, text: String, rect: Rect2, font_size: int) -> Button:
+# every button: same skin, same size (BTN_SIZE). Only the position and text change.
+static func make_button(parent: Node, text: String, pos: Vector2, font_size: int = BTN_FONT) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.add_theme_font_size_override("font_size", font_size)
 	b.add_theme_color_override("font_color", Color.WHITE)
 	b.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.5))
 	skin_button(b)                       # skin first, then size
-	b.position = rect.position
-	b.size = rect.size
+	b.position = pos
+	b.size = BTN_SIZE
 	parent.add_child(b)
 	return b
 
