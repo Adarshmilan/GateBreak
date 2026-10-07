@@ -13,6 +13,7 @@ var active := true                # false = ignore all input (round is over)
 
 func setup(world_node: Node2D) -> void:
 	world = world_node
+	world.y_sort_enabled = true
 	slots.resize(Arena.SLOT_COUNT)
 
 

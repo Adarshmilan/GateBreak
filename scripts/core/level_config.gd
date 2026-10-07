@@ -63,7 +63,7 @@ const ASSIST_GOLD_PER_LOSS := 0.12
 const ASSIST_MAX_STACKS := 6                # ... up to 6 stacks (48% weaker zombies). A win resets it to 0.
 
 # ============================================================ MAX MERGE LEVEL (tower.gd COLORS just clamps)
-const MAX_TOWER_LEVEL := 12
+const MAX_TOWER_LEVEL := 8
 
 # ============================================================ REWARDS (permanent coins)
 const WIN_COINS_BASE := 20
