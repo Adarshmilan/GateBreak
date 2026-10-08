@@ -115,8 +115,6 @@ func _on_gate_hit(z: Zombie) -> void:
 		_game_over()
 
 
-# ---------------------------------------------------------------- end of round
-# Both endings go through here: freeze everything first, THEN show the result.
 func _end_round() -> void:
 	over = true
 	director.stop()

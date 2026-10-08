@@ -1,71 +1,54 @@
-# menu.gd -> attach to root Control node of menu.tscn (set as Main Scene)
+# menu.gd -> landing page (root Control of menu.tscn, the Main Scene)
 extends Control
 
-const UPGRADES := {
-	"damage": "Tower Damage (+10%)",
-	"gate": "Gate Health (+2)",
-	"gold": "Gold Earned (+10%)",
-}
+const UIKit := preload("res://scripts/ui/ui_kit.gd")
 
-var coins_label: Label
-var play_btn: Button
-var buttons := {}
+# button positions on the 540x960 screen (right of the zombie face)
+const PLAY_POS := Vector2(272, 545)       # top-left of the PLAY button (size = UIKit.BTN_SIZE)
+const UPGRADE_POS := Vector2(272, 635)
+const STATS_SCALE := 0.15                     # size of the level/coin bar
+const STATS_Y := 190.0                        # screen y of the bar's top edge (just under the logo)
+const STATS_IMG_SIZE := Vector2(1944, 809)    # the image's own size
+const STATS_TOP := 237.0                      # empty space above the bar inside the image
+const LEVEL_SLOT := Rect2(441, 290, 468, 148) # slot boxes in IMAGE pixels
+const COIN_SLOT := Rect2(1288, 290, 486, 149)
+
+var level_label: Label
+var coin_label: Label
+
 
 func _ready() -> void:
 	get_tree().paused = false
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var bg := ColorRect.new()
-	bg.color = Color("1b1f2a")
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	UIKit.add_background(self, 0.0)
 
-	var box := VBoxContainer.new()
-	box.set_anchors_preset(Control.PRESET_FULL_RECT)
-	box.offset_left = 40
-	box.offset_right = -40
-	box.offset_top = 80
-	box.add_theme_constant_override("separation", 20)
-	add_child(box)
 
-	var title := Label.new()
-	title.text = "LAST GATE"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 64)
-	box.add_child(title)
-
-	coins_label = Label.new()
-	coins_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	coins_label.add_theme_font_size_override("font_size", 28)
-	box.add_child(coins_label)
-
-	for key in UPGRADES.keys():
-		var b := Button.new()
-		b.custom_minimum_size = Vector2(0, 80)
-		b.add_theme_font_size_override("font_size", 24)
-		b.pressed.connect(_on_upgrade.bind(key))
-		box.add_child(b)
-		buttons[key] = b
-
-	play_btn = Button.new()
-	play_btn.custom_minimum_size = Vector2(0, 100)
-	play_btn.add_theme_font_size_override("font_size", 40)
+	var play_btn := UIKit.make_button(self, "PLAY", PLAY_POS)
 	play_btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/game.tscn"))
-	box.add_child(play_btn)
-	_refresh()
 
-func _on_upgrade(key: String) -> void:
-	GameData.buy_upgrade(key)
-	_refresh()
+	var up_btn := UIKit.make_button(self, "UPGRADES", UPGRADE_POS)
+	up_btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/upgrades.tscn"))
+	_build_stats()
+	
+	
+func _build_stats() -> void:
+	# top-left corner of the whole image on screen (centered horizontally)
+	var origin := Vector2((540.0 - STATS_IMG_SIZE.x * STATS_SCALE) / 2.0, STATS_Y - STATS_TOP * STATS_SCALE)
 
-func _refresh() -> void:
-	coins_label.text = "Coins: %d   |   Best Level: %d" % [GameData.coins, GameData.best_level]
-	play_btn.text = "PLAY LEVEL %d" % GameData.level
-	for key in buttons.keys():
-		var lvl: int = GameData.upgrades[key]
-		var b: Button = buttons[key]
-		if lvl >= GameData.MAX_UPGRADE:
-			b.text = "%s  [MAX]" % UPGRADES[key]
-			b.disabled = true
-		else:
-			b.text = "%s  Lv %d  -  %d coins" % [UPGRADES[key], lvl, GameData.upgrade_cost(key)]
-			b.disabled = GameData.coins < GameData.upgrade_cost(key)
+	var pic := TextureRect.new()
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE    # must come before size
+	pic.stretch_mode = TextureRect.STRETCH_SCALE
+	pic.texture = load("res://assets/UI/level_coin_hud.png")
+	pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pic.position = origin
+	pic.size = STATS_IMG_SIZE * STATS_SCALE
+	add_child(pic)
+
+	level_label = UIKit.make_label(self, str(GameData.level), _slot_on_screen(LEVEL_SLOT, origin), 26)
+	coin_label = UIKit.make_label(self, str(GameData.coins), _slot_on_screen(COIN_SLOT, origin), 26)
+
+
+# converts a slot box from image pixels to screen pixels
+func _slot_on_screen(slot: Rect2, origin: Vector2) -> Rect2:
+	return Rect2(origin + slot.position * STATS_SCALE, slot.size * STATS_SCALE)

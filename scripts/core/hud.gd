@@ -40,6 +40,12 @@ var victory_coin_label: Label
 var victory_level_label: Label
 var secondary_btn: Button
 
+const PAUSE_SCALE := 1.2     # 1.0 = full image size
+const PAUSE_Y := 290.0        # top of the image on screen
+
+var pause_panel: Control
+var pause_btn: Button
+
 
 
 
@@ -88,7 +94,9 @@ func _ready() -> void:
 		get_tree().reload_current_scene())
 	secondary_btn.pressed.connect(func():
 		get_tree().paused = false
-		get_tree().change_scene_to_file("res://scenes/menu.tscn"))
+		get_tree().change_scene_to_file("res://scenes/upgrades.tscn"))
+	
+	_build_pause_menu()
 
 
 func _make_label(parent: Node, pos: Vector2, font_size: int) -> Label:
@@ -287,6 +295,7 @@ func show_banner(text: String) -> void:
 
 
 func show_result(text: String, primary_text: String) -> void:
+	pause_btn.visible = false
 	over_label.text = text
 	over_label.visible = true
 	defeat_art.visible = false
@@ -302,3 +311,90 @@ func show_defeat(wave: int, waves: int, kills: int, coins: int) -> void:
 	defeat_wave_label.text = "%d/%d" % [wave, waves]
 	defeat_coin_label.text = str(coins)
 	defeat_kill_label.text = str(kills)
+
+
+
+func _build_pause_menu() -> void:
+	# small pause button on the HUD (below the top bar, right side)
+	pause_btn = Button.new()
+	pause_btn.text = "II"
+	pause_btn.add_theme_font_size_override("font_size", 24)
+	pause_btn.position = Vector2(472, 80)
+	pause_btn.size = Vector2(60, 44)
+	pause_btn.pressed.connect(open_pause)
+	add_child(pause_btn)
+
+	# the pause screen: dark dim + the panel image
+	pause_panel = Control.new()
+	pause_panel.visible = false
+	pause_panel.size = Vector2(540, 960)
+	add_child(pause_panel)
+
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.6)
+	dim.size = Vector2(540, 960)
+	pause_panel.add_child(dim)
+
+	var art := Control.new()
+	art.size = Vector2(1050, 700)                          # the image's own size
+	art.scale = Vector2(PAUSE_SCALE, PAUSE_SCALE)
+	art.position = Vector2((540.0 - 612.0 * PAUSE_SCALE) / 2.0, PAUSE_Y)
+	pause_panel.add_child(art)
+
+	var pic := TextureRect.new()
+	pic.texture = load(UI + "pause_menu.png")
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	art.add_child(pic)
+
+	# invisible buttons placed over the 3 buttons in the picture (image pixels)
+	_hotspot(art, Rect2(197, 130, 218, 50), close_pause)   # green: resume
+	_hotspot(art, Rect2(197, 195, 218, 50), _restart)      # blue: restart
+	_hotspot(art, Rect2(197, 259, 218, 50), _go_home)      # blue: home
+
+
+# a see-through button; it only darkens a little while pressed
+func _hotspot(parent: Node, rect: Rect2, action: Callable) -> void:
+	var b := Button.new()
+	b.flat = true
+	b.focus_mode = Control.FOCUS_NONE
+	for s in ["normal", "hover", "focus", "disabled"]:
+		b.add_theme_stylebox_override(s, StyleBoxEmpty.new())
+	var press := StyleBoxFlat.new()
+	press.bg_color = Color(0, 0, 0, 0.25)
+	press.set_corner_radius_all(24)
+	b.add_theme_stylebox_override("pressed", press)
+	b.position = rect.position
+	b.size = rect.size
+	b.pressed.connect(action)
+	parent.add_child(b)
+
+
+func open_pause() -> void:
+	if over_panel.visible or pause_panel.visible:
+		return                       # not after the round has ended
+	pause_panel.visible = true
+	get_tree().paused = true
+
+
+func close_pause() -> void:
+	pause_panel.visible = false
+	get_tree().paused = false
+
+
+func _restart() -> void:
+	get_tree().paused = false
+	get_tree().reload_current_scene()
+
+
+func _go_home() -> void:
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://scenes/menu.tscn")
+
+
+# phone back button / Esc also opens and closes the pause menu
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") and not over_panel.visible:
+		if pause_panel.visible:
+			close_pause()
+		else:
+			open_pause()
