@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://cr0tuqy0hk0mx"
 path.s3tc="res://.godot/imported/missiletower_building002_2.png-eb59d7b1865f8453a2a2589a7e26f749.s3tc.ctex"
+path.etc2="res://.godot/imported/missiletower_building002_2.png-eb59d7b1865f8453a2a2589a7e26f749.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/guns/level_4/missiletower_building002_2.png"
-dest_files=["res://.godot/imported/missiletower_building002_2.png-eb59d7b1865f8453a2a2589a7e26f749.s3tc.ctex"]
+dest_files=["res://.godot/imported/missiletower_building002_2.png-eb59d7b1865f8453a2a2589a7e26f749.s3tc.ctex", "res://.godot/imported/missiletower_building002_2.png-eb59d7b1865f8453a2a2589a7e26f749.etc2.ctex"]
 
 [params]
 

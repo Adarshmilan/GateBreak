@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dlnuvnupvs1ip"
 path.s3tc="res://.godot/imported/scifi_turret_4.png-93637f27c282e0299d9eece956108505.s3tc.ctex"
+path.etc2="res://.godot/imported/scifi_turret_4.png-93637f27c282e0299d9eece956108505.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/guns/level_2/scifi_turret_4.png"
-dest_files=["res://.godot/imported/scifi_turret_4.png-93637f27c282e0299d9eece956108505.s3tc.ctex"]
+dest_files=["res://.godot/imported/scifi_turret_4.png-93637f27c282e0299d9eece956108505.s3tc.ctex", "res://.godot/imported/scifi_turret_4.png-93637f27c282e0299d9eece956108505.etc2.ctex"]
 
 [params]
 

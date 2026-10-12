@@ -35,7 +35,7 @@ const FIRE_RATE := 1.2
 const TARGET_POOL := 15
 
 # ---- look ----
-const VIEW_PX := 320
+const VIEW_PX := 384               # sharper render (go back to 320 if a phone lags)
 const FOOTPRINT := 1.4             # gun length relative to the slot width (bigger = bigger gun)
 const SIZE_LEVEL_1 := 0.85         # grows with level
 const SIZE_LEVEL_8 := 1.05
@@ -45,10 +45,11 @@ const CAMERA_SIZE := 3.6
 const CAMERA_POS := Vector3(0.0, 4.0, 4.0)
 const CAMERA_TARGET_Y := 0.6
 const TURN_SPEED := 12.0
-const OUTLINE_WIDTH := 0.03
+const OUTLINE_WIDTH := 0.022       # thinner outline looks cleaner
 
 # ---- shooting effects ----
 const RECOIL_PX := 7.0
+const MERGE_QUIET := 0.6           # seconds a tower stays silent after a spawn / merge
 
 static var _barrel_cache := {}     # level index -> [yaw, length, height]
 
@@ -59,7 +60,9 @@ var level := 1:
 			_load_model()
 var cooldown := 0.0
 var target: Zombie = null
+var held := false                  # true while the player drags this tower (tower_grid.gd sets it)
 
+var _busy := 0.0                   # no firing while this is above 0
 var _viewport: SubViewport
 var _holder: Node3D
 var _model: Node3D
@@ -81,6 +84,7 @@ func damage() -> float:
 
 
 func _ready() -> void:
+	cooldown = randf() * (1.0 / FIRE_RATE)   # random start so towers don't fire together
 	_build_viewport()
 	_build_flash()
 	_load_model()
@@ -96,6 +100,7 @@ func _build_viewport() -> void:
 	_viewport.transparent_bg = true
 	_viewport.own_world_3d = true
 	_viewport.msaa_3d = Viewport.MSAA_4X
+	_viewport.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(_viewport)
 
@@ -299,8 +304,10 @@ func _process(delta: float) -> void:
 			_aim_angle = lerp_angle(_aim_angle, want, clampf(TURN_SPEED * delta, 0.0, 1.0))
 			_holder.rotation.y = _aim_angle
 
+	if _busy > 0.0:
+		_busy -= delta
 	cooldown -= delta
-	if cooldown > 0.0 or target == null:
+	if cooldown > 0.0 or target == null or held or _busy > 0.0:
 		return
 
 	var muzzle := _muzzle_pos()
@@ -309,7 +316,7 @@ func _process(delta: float) -> void:
 	p.damage = damage()
 	p.global_position = to_global(muzzle)
 	get_parent().add_child(p)
-	cooldown = 1.0 / FIRE_RATE
+	cooldown = (1.0 / FIRE_RATE) * randf_range(0.8, 1.25)   # slightly different rhythm each shot
 
 	_recoil = RECOIL_PX
 	_flash.position = muzzle
@@ -335,8 +342,9 @@ func _pick_target() -> Zombie:
 	return zombies[randi() % pool_size]
 
 
-# plays on spawn AND on every merge: the evolve effect
+# plays on spawn AND on every merge: the evolve effect (the gun stays quiet meanwhile)
 func pop() -> void:
+	_busy = MERGE_QUIET
 	scale = Vector2(0.5, 0.5)
 	var tw := create_tween()
 	tw.tween_property(self, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -367,16 +375,26 @@ func _burst() -> void:
 
 
 # the fixed cartoon base: fills the grid slot and never rotates
+# round dark-metal platform with a glowing ring in the level colour (fixed, never rotates)
+# hexagon metal base with a glowing ring in the level colour (fixed, never rotates)
 func _draw() -> void:
 	var col: Color = BASE_COLORS[clampi(level - 1, 0, BASE_COLORS.size() - 1)]
-	var outer := PackedVector2Array()
-	for pt in Persp.ground_quad(position, Arena.SLOT_W * 0.92, Arena.SLOT_H * 0.92):
-		outer.append(pt - position)
-	draw_colored_polygon(outer, col.darkened(0.35))
-	var inner := PackedVector2Array()
-	for pt in Persp.ground_quad(position, Arena.SLOT_W * 0.7, Arena.SLOT_H * 0.7):
-		inner.append(pt - position)
-	draw_colored_polygon(inner, col)
-	var line := outer.duplicate()
-	line.append(outer[0])
-	draw_polyline(line, Color.WHITE, 2.0)
+	var rx := Arena.plate_w_at(position.y) * 0.40
+	var ry := Arena.plate_h_at(position.y) * 0.36
+	draw_colored_polygon(_hex(rx * 1.1, ry * 1.1), Color(col.r, col.g, col.b, 0.22))   # glow
+	draw_colored_polygon(_hex(rx, ry), Color("0f141c"))                                # dark rim
+	draw_colored_polygon(_hex(rx * 0.92, ry * 0.92), Color("2b3445"))                  # steel plate
+	draw_colored_polygon(_hex(rx * 0.62, ry * 0.62), col.darkened(0.5))                # inner hexagon
+	var ring := _hex(rx * 0.8, ry * 0.8)
+	ring.append(ring[0])
+	draw_polyline(ring, col.lightened(0.15), 3.0)
+	for p in _hex(rx * 0.92, ry * 0.92):                                               # six corner bolts
+		draw_circle(p, 2.5, col.lightened(0.3))
+
+
+func _hex(rx: float, ry: float) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in 6:
+		var a := TAU * i / 6.0
+		pts.append(Vector2(cos(a) * rx, sin(a) * ry))
+	return pts

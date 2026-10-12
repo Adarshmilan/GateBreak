@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://c1aa3l2imxh06"
 path.s3tc="res://.godot/imported/level_3_9.png-d35708c84840b290264cae0d1e33e6c3.s3tc.ctex"
+path.etc2="res://.godot/imported/level_3_9.png-d35708c84840b290264cae0d1e33e6c3.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/guns/level_3/level_3_9.png"
-dest_files=["res://.godot/imported/level_3_9.png-d35708c84840b290264cae0d1e33e6c3.s3tc.ctex"]
+dest_files=["res://.godot/imported/level_3_9.png-d35708c84840b290264cae0d1e33e6c3.s3tc.ctex", "res://.godot/imported/level_3_9.png-d35708c84840b290264cae0d1e33e6c3.etc2.ctex"]
 
 [params]
 

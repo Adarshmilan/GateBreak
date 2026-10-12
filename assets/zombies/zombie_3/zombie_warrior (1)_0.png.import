@@ -2,16 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://depialq26a5gn"
-path="res://.godot/imported/road.png-72005ad96a94b3869b023c4f4a0b0b7d.ctex"
+uid="uid://dsyj0hwq2uirq"
+path="res://.godot/imported/zombie_warrior (1)_0.png-1a0fbdfc0471cbc04079f36bd18b1c42.ctex"
 metadata={
 "vram_texture": false
+}
+generator_parameters={
+"md5": "b6f08d585e07d65157229ed236294b30"
 }
 
 [deps]
 
-source_file="res://assets/road.png"
-dest_files=["res://.godot/imported/road.png-72005ad96a94b3869b023c4f4a0b0b7d.ctex"]
+source_file="res://assets/zombies/zombie_3/zombie_warrior (1)_0.png"
+dest_files=["res://.godot/imported/zombie_warrior (1)_0.png-1a0fbdfc0471cbc04079f36bd18b1c42.ctex"]
 
 [params]
 
@@ -23,7 +26,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

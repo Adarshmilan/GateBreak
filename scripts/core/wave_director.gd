@@ -83,14 +83,28 @@ func _set_wave(w: int) -> void:
 	wave_started.emit(w)
 
 
-func _spawn_zombie(entry: Dictionary) -> void:
+func _spawn_zombie(entry: Dictionary) 	-> void:
 	var z := Zombie.new()
 	z.setup(entry["kind"], entry["hp"], entry["speed"])
 	var margin := z.radius / Persp.scale_at(Arena.GATE_Y) + 80.0
+
+	# try several lanes, keep the one farthest from zombies that just spawned
 	var lane_x := randf_range(margin, Arena.SCREEN_W - margin)
+	var best_gap := -1.0
+	for i in 8:
+		var cand := randf_range(margin, Arena.SCREEN_W - margin)
+		var gap := 9999.0
+		for other in get_tree().get_nodes_in_group("zombies"):
+			if other.position.y < Arena.SPAWN_Y + 260.0:
+				gap = minf(gap, absf(other.lane_x - cand))
+		if gap > best_gap:
+			best_gap = gap
+			lane_x = cand
+
 	z.lane_x = lane_x
 	z.position = Vector2(Persp.screen_x(lane_x, Arena.SPAWN_Y), Arena.SPAWN_Y)
-	z.gate_y = Arena.GATE_Y
+		# feet stop at the wall; a little random spread so they don't stack on one line
+	z.gate_y = Arena.ZOMBIE_STOP_Y - randf() * 14.0
 	z.died.connect(func(zz): zombie_died.emit(zz))
 	z.reached_gate.connect(func(): zombie_reached_gate.emit(z))
 	world.add_child(z)

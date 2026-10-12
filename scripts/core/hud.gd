@@ -8,6 +8,7 @@ signal buy_pressed
 const UI := "res://assets/UI/"
 const BAR_RECT := Rect2(8, 8, 524, 64)   # x, y, width, height of the whole bar
 var wave_bar: ProgressBar
+var top_bar: TextureRect
 const BTN_NORMAL := UI + "btn_normal.png"
 const BTN_PRESSED := UI + "btn_pressed.png"
 const BTN_DISABLE := UI + "btn_disable.png"
@@ -69,12 +70,13 @@ func _ready() -> void:
 	_skin_button(buy_btn, BTN_NORMAL, BTN_PRESSED, BTN_DISABLE)
 
 	over_panel = Control.new()
-	over_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	over_panel.size = Vector2(540, 960)          # same design space as the game
 	over_panel.visible = false
 	add_child(over_panel)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.8)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.position = Vector2(-3000, -3000)         # dims the whole screen, any shape
+	dim.size = Vector2(6540, 6960)
 	over_panel.add_child(dim)
 	over_label = _make_label(over_panel, Vector2(0, 260), 40)
 	over_label.size = Vector2(540, 200)
@@ -107,7 +109,8 @@ func _make_label(parent: Node, pos: Vector2, font_size: int) -> Label:
 	return l
 
 func _build_top_bar() -> void:
-	var bar := _make_image(self, UI + "top_bar.png", BAR_RECT.position, BAR_RECT.size)
+	top_bar = _make_image(self, UI + "top_bar.png", BAR_RECT.position, BAR_RECT.size)
+	var bar := top_bar
 	bar.self_modulate.a = 0.4
 
 	# all positions below are INSIDE the bar (0,0 = top-left corner of the bar)
@@ -332,7 +335,8 @@ func _build_pause_menu() -> void:
 
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.6)
-	dim.size = Vector2(540, 960)
+	dim.position = Vector2(-3000, -3000)
+	dim.size = Vector2(6540, 6960)
 	pause_panel.add_child(dim)
 
 	var art := Control.new()
@@ -398,3 +402,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			close_pause()
 		else:
 			open_pause()
+
+# called by game.gd: same scale/position as the game, top bar pinned to the screen top
+# called by game.gd: same scale/position as the game, top bar and pause button pinned to the screen top
+func apply_layout(f: float, pos: Vector2, extra_top: float, safe_top: float) -> void:
+	scale = Vector2(f, f)
+	offset = pos
+	var shift := -extra_top + safe_top
+	if top_bar != null:
+		top_bar.position.y = BAR_RECT.position.y + shift
+	if pause_btn != null:
+		pause_btn.position.y = 80.0 + shift      # always just below the top bar

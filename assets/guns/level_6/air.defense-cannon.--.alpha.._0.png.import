@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://domcl7qnjdwqj"
 path.s3tc="res://.godot/imported/air.defense-cannon.--.alpha.._0.png-05cf6d18d32535a0404e403efb63cbb3.s3tc.ctex"
+path.etc2="res://.godot/imported/air.defense-cannon.--.alpha.._0.png-05cf6d18d32535a0404e403efb63cbb3.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/guns/level_6/air.defense-cannon.--.alpha.._0.png"
-dest_files=["res://.godot/imported/air.defense-cannon.--.alpha.._0.png-05cf6d18d32535a0404e403efb63cbb3.s3tc.ctex"]
+dest_files=["res://.godot/imported/air.defense-cannon.--.alpha.._0.png-05cf6d18d32535a0404e403efb63cbb3.s3tc.ctex", "res://.godot/imported/air.defense-cannon.--.alpha.._0.png-05cf6d18d32535a0404e403efb63cbb3.etc2.ctex"]
 
 [params]
 

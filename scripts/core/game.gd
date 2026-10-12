@@ -1,9 +1,5 @@
 # game.gd -> res://scripts/core/game.gd (attach to the root Node2D of game.tscn)
 # The "assembler": creates the parts, connects them, and owns the round's money, gate and result.
-#   Arena         (arena.gd)         layout + drawing of the field
-#   TowerGrid     (tower_grid.gd)    slots, drag, merge
-#   WaveDirector  (wave_director.gd)  schedule + spawning
-#   Hud           (ui/hud.gd)        labels, buttons, banner, result panel
 extends Node2D
 
 
@@ -35,6 +31,9 @@ func _ready() -> void:
 	add_child(hud)
 	hud.buy_pressed.connect(_on_buy)
 
+	add_child(BloodLayer.new())      # blood is drawn under towers and zombies
+	add_child(GateFront.new())       # gate is drawn in front of the zombies
+
 	grid = TowerGrid.new()
 	add_child(grid)
 	grid.setup(self)
@@ -47,11 +46,42 @@ func _ready() -> void:
 	director.zombie_reached_gate.connect(_on_gate_hit)
 	director.cleared.connect(_win)
 
+	_layout()
+	get_viewport().size_changed.connect(_layout)   # re-fit if the window changes
+
 	director.start()
 	_update_ui()
 
 
+# fit the 540x960 game to this phone's screen (HUD follows the same transform)
+func _layout() -> void:
+	var f := ScreenFit.fit(self)
+	scale = Vector2(f, f)
+	position = ScreenFit.origin(self)
+	var extra_top := position.y / f          # empty space above the field, in game units
+	hud.apply_layout(f, position, extra_top, ScreenFit.inset_top(self) / f)
+	queue_redraw()
+
+
 func _draw() -> void:
+	var extra := position.y / scale.x
+	var art_top := Arena.GATE_Y - 525.0      # where the background art starts
+	var dark := Color("0d0f18")
+	draw_rect(Rect2(-3000, -3000, 6540, 6960), dark)          # fills any spare space
+
+	# tall phone: stretch the top of the art upward and fade it into darkness
+	if extra + art_top > 2.0:
+		var tex: Texture2D = Arena.ROAD_FULL
+		var h := extra + art_top + 2.0
+		draw_texture_rect_region(tex, Rect2(0.0, -extra, Arena.SCREEN_W, h),
+			Rect2(0.0, 0.0, float(tex.get_width()), 24.0))
+		var top := Color(dark.r, dark.g, dark.b, 1.0)
+		var bottom := Color(dark.r, dark.g, dark.b, 0.0)
+		draw_polygon(
+			PackedVector2Array([Vector2(0, -extra), Vector2(Arena.SCREEN_W, -extra),
+				Vector2(Arena.SCREEN_W, art_top + 2.0), Vector2(0, art_top + 2.0)]),
+			PackedColorArray([top, top, bottom, bottom]))
+
 	Arena.draw(self, gate_hp, gate_max)
 
 

@@ -3,9 +3,10 @@ render_mode cull_back;
 
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap, repeat_enable;
 uniform vec4 tint : source_color = vec4(1.0);
-uniform float saturation = 1.35;
-uniform float brightness = 1.3;
-uniform float smooth_lod = 1.6;      // higher = smoother, cleaner texture
+uniform float saturation = 1.4;
+uniform float brightness = 1.25;
+uniform float smooth_lod = 1.6;
+uniform float clip_y = 0.0;          // everything below this height is cut (guns). Zombies use -100.
 
 varying float h;
 
@@ -14,7 +15,7 @@ void vertex() {
 }
 
 void fragment() {
-	if (h < 0.0) discard;
+	if (h < clip_y) discard;
 	vec3 c = textureLod(albedo_tex, UV, smooth_lod).rgb * tint.rgb;
 	float g = dot(c, vec3(0.299, 0.587, 0.114));
 	c = mix(vec3(g), c, saturation) * brightness;
@@ -25,7 +26,6 @@ void fragment() {
 
 void light() {
 	float nl = dot(NORMAL, LIGHT);
-	// soft cartoon bands instead of hard steps
-	float b = 0.5 + 0.22 * smoothstep(-0.05, 0.1, nl) + 0.28 * smoothstep(0.4, 0.6, nl);
+	float b = 0.55 + 0.22 * smoothstep(-0.05, 0.1, nl) + 0.28 * smoothstep(0.4, 0.6, nl);
 	DIFFUSE_LIGHT += LIGHT_COLOR * b * ATTENUATION;
 }
