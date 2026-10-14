@@ -50,6 +50,7 @@ func _ready() -> void:
 
 	_fit()
 	get_viewport().size_changed.connect(_fit)
+	Audio.play_music(Audio.MUSIC_MENU)
 
 
 # scales and centres the holder for whatever screen this phone has

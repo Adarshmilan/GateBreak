@@ -59,6 +59,7 @@ static func make_button(parent: Node, text: String, pos: Vector2, font_size: int
 	b.position = pos
 	b.size = BTN_SIZE
 	parent.add_child(b)
+	b.pressed.connect(Audio.click)
 	return b
 
 

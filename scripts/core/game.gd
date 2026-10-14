@@ -51,6 +51,7 @@ func _ready() -> void:
 
 	director.start()
 	_update_ui()
+	Audio.play_music(Audio.MUSIC_MENU)
 
 
 # fit the 540x960 game to this phone's screen (HUD follows the same transform)
@@ -155,6 +156,7 @@ func _win() -> void:
 	if over:
 		return
 	_end_round()
+	Audio.victory()
 	var earned := LevelConfig.win_coins(lvl, kills)
 	GameData.complete_level(earned)
 	hud.show_victory(kills, earned, lvl)
@@ -165,6 +167,7 @@ func _game_over() -> void:
 	if over:
 		return
 	_end_round()
+	Audio.defeat()
 	var share := float(director.wave) / LevelConfig.WAVES
 	var earned := int(LevelConfig.win_coins(lvl, kills) * LevelConfig.LOSE_COIN_FRACTION * share)
 	GameData.fail_level(earned)

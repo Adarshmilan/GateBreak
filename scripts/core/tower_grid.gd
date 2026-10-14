@@ -94,7 +94,8 @@ func _drop() -> void:
 		slots[drag_from] = null
 		t.queue_free()
 		other.level += 1
-		other.pop()                                     # evolve effect, and it stays quiet for a moment
+		other.pop()        
+		Audio.merge(other.level)                             
 		other.queue_redraw()
 	else:                                               # swap
 		slots[drag_from] = other

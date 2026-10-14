@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://b66cjxlefv771"]
 
-[ext_resource type="Script" path="res://scripts/ui/upgrades.gd" id="1"]
+[ext_resource type="Script" uid="uid://cv3s877ao1k2d" path="res://scripts/ui/upgrades.gd" id="1"]
 
-[node name="Control" type="Control"]
+[node name="Control" type="Control" unique_id=1361484347]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0

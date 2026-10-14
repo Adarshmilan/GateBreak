@@ -66,6 +66,7 @@ func _ready() -> void:
 	buy_btn.position = BUY_RECT.position
 	buy_btn.size = BUY_RECT.size
 	buy_btn.pressed.connect(func(): buy_pressed.emit())
+	buy_btn.pressed.connect(Audio.click)
 	add_child(buy_btn)
 	_skin_button(buy_btn, BTN_NORMAL, BTN_PRESSED, BTN_DISABLE)
 
@@ -170,6 +171,7 @@ func _make_button(parent: Node, text: String, pos: Vector2, btn_size := Vector2(
 	b.position = pos
 	b.size = btn_size
 	parent.add_child(b)
+	b.pressed.connect(Audio.click)
 	return b
 	
 func _make_image(parent: Node, path: String, pos: Vector2, img_size: Vector2) -> TextureRect:
@@ -220,6 +222,7 @@ func refresh(gold: int, gate_hp: int, lvl: int, wave: int, secs_left: int, cost:
 	wave_bar.value = clampf(1.0 - float(secs_left) / LevelConfig.ROUND_TIME, 0.0, 1.0)
 	buy_btn.text = "BUY TOWER (%dg)" % cost
 	buy_btn.disabled = gold < cost
+	
 
 func _build_victory_art() -> void:
 	victory_art = Control.new()
@@ -325,6 +328,7 @@ func _build_pause_menu() -> void:
 	pause_btn.position = Vector2(472, 80)
 	pause_btn.size = Vector2(60, 44)
 	pause_btn.pressed.connect(open_pause)
+	pause_btn.pressed.connect(Audio.click)
 	add_child(pause_btn)
 
 	# the pause screen: dark dim + the panel image

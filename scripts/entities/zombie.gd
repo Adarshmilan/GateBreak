@@ -299,6 +299,10 @@ func take_damage(amount: float) -> void:
 		dead = true
 		remove_from_group("zombies")
 		died.emit(self)
+		if is_boss:
+			Audio.boss_die()
+		else:
+			Audio.zombie_die()
 		_die(blood)
 	else:
 		if not attacking:

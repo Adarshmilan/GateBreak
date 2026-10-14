@@ -10,7 +10,7 @@ const GUN_SCENES := [
 	preload("res://assets/guns/level_5/level_5.glb"),
 	preload("res://assets/guns/level_6/level_6.glb"),
 	preload("res://assets/guns/level_7/level_7.glb"),
-	preload("res://assets/guns/level_8/level_8.glb"),
+
 ]
 const TOON_SHADER := preload("res://shaders/gun_toon.gdshader")
 const OUTLINE_SHADER := preload("res://shaders/gun_outline.gdshader")
@@ -316,6 +316,7 @@ func _process(delta: float) -> void:
 	p.damage = damage()
 	p.global_position = to_global(muzzle)
 	get_parent().add_child(p)
+	Audio.shoot()
 	cooldown = (1.0 / FIRE_RATE) * randf_range(0.8, 1.25)   # slightly different rhythm each shot
 
 	_recoil = RECOIL_PX
