@@ -13,11 +13,17 @@ var active := true                # false = ignore all input (round is over)
 
 func setup(world_node: Node2D) -> void:
 	world = world_node
+	world.y_sort_enabled = true   # towers lower on the screen are drawn in front
 	slots.resize(Arena.SLOT_COUNT)
 
 
 func has_space() -> bool:
 	return slots.has(null)
+
+
+# the pointer position in the game's own coordinates (works with any screen scale)
+func _pointer() -> Vector2:
+	return world.get_local_mouse_position()
 
 
 # put a new level-1 tower in a random empty slot (call has_space() first)
@@ -41,6 +47,7 @@ func lock() -> void:
 	active = false
 	if dragging != null:
 		dragging.z_index = 0
+		dragging.held = false
 		dragging.position = Arena.slot_pos(drag_from)
 		dragging = null
 
@@ -50,20 +57,21 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not active:
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		var i := Arena.slot_at(world.get_global_mouse_position())
+		var i := Arena.slot_at(_pointer())
 		if i >= 0 and slots[i] != null:
 			dragging = slots[i]
 			drag_from = i
 			dragging.z_index = 10
+			dragging.held = true          # a held tower does not shoot
 
 
 # ... but moving and releasing use _input, so a drag can never get stuck
-# (e.g. if you let go while the mouse is over the BUY button).
+# (e.g. if you let go while the pointer is over the BUY button).
 func _input(event: InputEvent) -> void:
 	if not active or dragging == null:
 		return
 	if event is InputEventMouseMotion:
-		dragging.position = world.get_global_mouse_position()
+		dragging.position = _pointer()
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
 		_drop()
 
@@ -72,7 +80,8 @@ func _drop() -> void:
 	var t := dragging
 	dragging = null
 	t.z_index = 0
-	var j := Arena.slot_at(world.get_global_mouse_position())
+	t.held = false
+	var j := Arena.slot_at(_pointer())
 	if j < 0 or j == drag_from:
 		t.position = Arena.slot_pos(drag_from)
 		return
@@ -85,7 +94,7 @@ func _drop() -> void:
 		slots[drag_from] = null
 		t.queue_free()
 		other.level += 1
-		other.pop()
+		other.pop()                                     # evolve effect, and it stays quiet for a moment
 		other.queue_redraw()
 	else:                                               # swap
 		slots[drag_from] = other

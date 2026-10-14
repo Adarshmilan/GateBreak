@@ -21,8 +21,8 @@ GameData="*uid://br23qoidjinky"
 
 [display]
 
-window/size/viewport_width=540
-window/size/viewport_height=960
+window/size/viewport_width=412
+window/size/viewport_height=915
 window/stretch/mode="canvas_items"
 window/handheld/orientation=1
 

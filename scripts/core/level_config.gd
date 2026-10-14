@@ -34,11 +34,11 @@ const SPEED_GROWTH := 0.25                  # +0.25 px/s per level ...
 const SPEED_CAP := 65.0                     # ... but never faster than this (keeps it dodge-able / playable)
 
 # ============================================================ KINDS  (index 0..3 = Walker, Brute, Tank, Giant)
-const KIND_UNLOCK_LEVEL := [1, 3, 6, 10]
-const KIND_WEIGHTS := [60.0, 25.0, 12.0, 5.0]
+const KIND_UNLOCK_LEVEL := [1, 2, 4, 7]       # Walker, Brute, Tank, Giant (Boss is separate)
+const KIND_WEIGHTS := [60.0, 45.0, 25.0, 15.0]
 const KIND_LEVEL_DRIFT := 0.03              # heavier kinds get +3% weight per level per tier
 const FINAL_WAVE_HEAVY_BONUS := 1.0         # final wave: Tank/Giant weights x2
-const BOSS_FROM_LEVEL := 5                  # final wave ends with a Boss from this level on
+const BOSS_FROM_LEVEL := 5                 # final wave ends with a Boss from this level on
 const BOSS_EVERY_N_LEVELS := 15             # +1 extra boss every N levels (L20 = 2 bosses ...)
 
 # ============================================================ PLAYER ECONOMY  (grows with level)
@@ -63,7 +63,7 @@ const ASSIST_GOLD_PER_LOSS := 0.12
 const ASSIST_MAX_STACKS := 6                # ... up to 6 stacks (48% weaker zombies). A win resets it to 0.
 
 # ============================================================ MAX MERGE LEVEL (tower.gd COLORS just clamps)
-const MAX_TOWER_LEVEL := 12
+const MAX_TOWER_LEVEL := 8
 
 # ============================================================ REWARDS (permanent coins)
 const WIN_COINS_BASE := 20
