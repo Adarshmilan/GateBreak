@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 GameData="*uid://br23qoidjinky"
 Audio="*uid://n0rseq6rpr3h"
+Haptics="*uid://c0vswqep63fty"
 
 [display]
 

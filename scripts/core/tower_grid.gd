@@ -95,7 +95,8 @@ func _drop() -> void:
 		t.queue_free()
 		other.level += 1
 		other.pop()        
-		Audio.merge(other.level)                             
+		Audio.merge(other.level)
+		Haptics.merge()                             
 		other.queue_redraw()
 	else:                                               # swap
 		slots[drag_from] = other

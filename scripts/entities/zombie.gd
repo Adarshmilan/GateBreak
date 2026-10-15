@@ -301,8 +301,10 @@ func take_damage(amount: float) -> void:
 		died.emit(self)
 		if is_boss:
 			Audio.boss_die()
+			Haptics.boss_die()
 		else:
 			Audio.zombie_die()
+			Haptics.zombie_die()
 		_die(blood)
 	else:
 		if not attacking:

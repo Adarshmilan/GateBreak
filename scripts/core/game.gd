@@ -157,6 +157,7 @@ func _win() -> void:
 		return
 	_end_round()
 	Audio.victory()
+	Haptics.victory()
 	var earned := LevelConfig.win_coins(lvl, kills)
 	GameData.complete_level(earned)
 	hud.show_victory(kills, earned, lvl)
@@ -168,6 +169,7 @@ func _game_over() -> void:
 		return
 	_end_round()
 	Audio.defeat()
+	Haptics.defeat()
 	var share := float(director.wave) / LevelConfig.WAVES
 	var earned := int(LevelConfig.win_coins(lvl, kills) * LevelConfig.LOSE_COIN_FRACTION * share)
 	GameData.fail_level(earned)
