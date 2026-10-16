@@ -4,8 +4,8 @@
 class_name GateFront
 extends Node2D
 
-const STRIP_TOP := 432.0       # screen y where the gate (spikes) starts
-const STRIP_BOTTOM := 498.0    # screen y where the gate wall ends
+const STRIP_TOP := 450.0       # screen y where the gate (spikes) starts
+const STRIP_BOTTOM := 525.0    # screen y where the gate wall ends
 const DEBUG := false           # true = shows a cyan frame around the strip, for calibrating
 
 

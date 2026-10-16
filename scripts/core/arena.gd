@@ -4,8 +4,8 @@
 class_name Arena
 extends RefCounted
 
-const GATE_Y := 500.0
-const ZOMBIE_STOP_Y := 462.0     # where the zombies' FEET stop (the gate wall). Lower number = they stop higher up
+const GATE_Y := 520.0
+const ZOMBIE_STOP_Y := 482.0     # where the zombies' FEET stop (the gate wall). Lower number = they stop higher up
 const ROAD_FULL := preload("res://assets/road.jpg")     # above 90%
 const ROAD_90   := preload("res://assets/gate30.png")   # 90% and below
 const ROAD_50   := preload("res://assets/gate50.png")   # 50% and below
@@ -26,14 +26,14 @@ const SLOT_H := 50.0
 
 # ---- SLOTS: centres of the 9 plates in the background art (screen pixels) ----
 # One entry per ROW (top, middle, bottom). Plates widen and spread out toward the bottom.
-const ROW_Y   := [599.0, 714.0, 845.0]
+const ROW_Y   := [636.0, 756.0, 880.0]
 const COL_X   := [[127.0, 270.0, 410.0], [110.0, 270.0, 430.0], [95.0, 270.0, 445.0]]
 const PLATE_W := [135.0, 150.0, 165.0]
 const PLATE_H := [100.0, 110.0, 130.0]
 const HIT_SHARE := 0.45          # click area = this share of the plate size
 const DEBUG_SLOTS := false     # draws a thin outline on every plate: use it to calibrate, then set false
 
-const GATE_BAR_Y := 528.0        # gate health bar, between the gate wall and the plates
+const GATE_BAR_Y := 546.0        # gate health bar, between the gate wall and the plates
 
 
 
