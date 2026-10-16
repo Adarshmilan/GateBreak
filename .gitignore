@@ -15,6 +15,7 @@
 # APK files (exported builds - don't commit binaries)
 *.apk
 *.aab
+/exports/
 
 # ==========================
 # Export & Build Artifacts
@@ -42,6 +43,16 @@
 *.js
 *.pck
 export_presets.cfg
+
+# ==========================
+# Old / Backup / Scratch Files
+# ==========================
+*_old.*
+*_backup.*
+*old.*
+check_*.py
+__pycache__/
+*.pyc
 
 # ==========================
 # OS & Editor Junk

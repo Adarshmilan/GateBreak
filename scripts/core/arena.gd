@@ -100,8 +100,8 @@ static func road_texture(gate_hp: int, gate_max: int) -> Texture2D:
 static func draw(ci: CanvasItem, gate_hp: int, gate_max: int) -> void:
 	ci.draw_rect(Rect2(0, 0, SCREEN_W, SCREEN_H), Color("1b1f2a"))
 
-	# road art: scaled to the screen width, shifted up so its gate wall lands on GATE_Y
-	ci.draw_texture_rect(ROAD_FULL, Rect2(0.0, GATE_Y - 525.0, 540.0, 959.5), false)
+	# tall road art: covers the entire screen from the bottom plates up through the cosmic vortex
+	ci.draw_texture_rect(road_texture(gate_hp, gate_max), Rect2(0.0, -245.0, SCREEN_W, 1205.0), false)
 
 	# gate health bar (rounded, same shape as the wave bar)
 	var bar_w := 240.0
