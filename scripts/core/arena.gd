@@ -83,15 +83,12 @@ static func road_edges(y: float) -> Vector2:
 	return Vector2(Persp.screen_x(0.0, y), Persp.screen_x(SCREEN_W, y))
 
 
-# picks the road image that matches how damaged the gate is
-static func road_texture(gate_hp: int, gate_max: int) -> Texture2D:
-	var pct := float(gate_hp) / gate_max * 100.0
-	if pct <= 30.0:
-		return ROAD_30
-	if pct <= 50.0:
-		return ROAD_50
-	if pct <= 90.0:
-		return ROAD_90
+const ROAD_DEST_Y := -245.0
+const ROAD_DEST_H := 1205.0
+
+
+# keeps the sci-fi road consistent without switching to old grass assets
+static func road_texture(_gate_hp: int, _gate_max: int) -> Texture2D:
 	return ROAD_FULL
 
 
@@ -101,7 +98,7 @@ static func draw(ci: CanvasItem, gate_hp: int, gate_max: int) -> void:
 	ci.draw_rect(Rect2(0, 0, SCREEN_W, SCREEN_H), Color("1b1f2a"))
 
 	# tall road art: covers the entire screen from the bottom plates up through the cosmic vortex
-	ci.draw_texture_rect(road_texture(gate_hp, gate_max), Rect2(0.0, -245.0, SCREEN_W, 1205.0), false)
+	ci.draw_texture_rect(ROAD_FULL, Rect2(0.0, ROAD_DEST_Y, SCREEN_W, ROAD_DEST_H), false)
 
 	# gate health bar (rounded, same shape as the wave bar)
 	var bar_w := 240.0
