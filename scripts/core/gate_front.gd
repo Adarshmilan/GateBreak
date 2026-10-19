@@ -4,8 +4,8 @@
 class_name GateFront
 extends Node2D
 
-const STRIP_TOP := 432.0       # screen y where the gate (spikes) starts
-const STRIP_BOTTOM := 498.0    # screen y where the gate wall ends
+const STRIP_TOP := 450.0       # screen y where the gate (spikes) starts
+const STRIP_BOTTOM := 525.0    # screen y where the gate wall ends
 const DEBUG := false           # true = shows a cyan frame around the strip, for calibrating
 
 
@@ -15,8 +15,8 @@ func _ready() -> void:
 
 func _draw() -> void:
 	var tex: Texture2D = Arena.ROAD_FULL
-	var dest_y := Arena.GATE_Y - 525.0
-	var dest_h := 959.5
+	var dest_y := Arena.ROAD_DEST_Y
+	var dest_h := Arena.ROAD_DEST_H
 	var tw := float(tex.get_width())
 	var th := float(tex.get_height())
 	var sy0 := (STRIP_TOP - dest_y) / dest_h * th

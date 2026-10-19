@@ -47,6 +47,8 @@ func _ready() -> void:
 	director.cleared.connect(_win)
 
 	_layout()
+	_layout.call_deferred()
+	get_tree().process_frame.connect(_layout, CONNECT_ONE_SHOT)
 	get_viewport().size_changed.connect(_layout)   # re-fit if the window changes
 
 	director.start()
@@ -65,24 +67,10 @@ func _layout() -> void:
 
 
 func _draw() -> void:
-	var extra := position.y / scale.x
-	var art_top := Arena.GATE_Y - 525.0      # where the background art starts
-	var dark := Color("0d0f18")
-	draw_rect(Rect2(-3000, -3000, 6540, 6960), dark)          # fills any spare space
+	var dark := Color("080812")
+	draw_rect(Rect2(-3000, -3000, 6540, 6960), dark)          # fills any spare space outside viewport
 
-	# tall phone: stretch the top of the art upward and fade it into darkness
-	if extra + art_top > 2.0:
-		var tex: Texture2D = Arena.ROAD_FULL
-		var h := extra + art_top + 2.0
-		draw_texture_rect_region(tex, Rect2(0.0, -extra, Arena.SCREEN_W, h),
-			Rect2(0.0, 0.0, float(tex.get_width()), 24.0))
-		var top := Color(dark.r, dark.g, dark.b, 1.0)
-		var bottom := Color(dark.r, dark.g, dark.b, 0.0)
-		draw_polygon(
-			PackedVector2Array([Vector2(0, -extra), Vector2(Arena.SCREEN_W, -extra),
-				Vector2(Arena.SCREEN_W, art_top + 2.0), Vector2(0, art_top + 2.0)]),
-			PackedColorArray([top, top, bottom, bottom]))
-
+	# Draw arena ground, road, and gate (the tall artwork covers the full screen)
 	Arena.draw(self, gate_hp, gate_max)
 
 

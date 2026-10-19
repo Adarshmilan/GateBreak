@@ -4,8 +4,8 @@
 class_name Arena
 extends RefCounted
 
-const GATE_Y := 500.0
-const ZOMBIE_STOP_Y := 462.0     # where the zombies' FEET stop (the gate wall). Lower number = they stop higher up
+const GATE_Y := 520.0
+const ZOMBIE_STOP_Y := 482.0     # where the zombies' FEET stop (the gate wall). Lower number = they stop higher up
 const ROAD_FULL := preload("res://assets/road.jpg")     # above 90%
 const ROAD_90   := preload("res://assets/gate30.png")   # 90% and below
 const ROAD_50   := preload("res://assets/gate50.png")   # 50% and below
@@ -26,14 +26,14 @@ const SLOT_H := 50.0
 
 # ---- SLOTS: centres of the 9 plates in the background art (screen pixels) ----
 # One entry per ROW (top, middle, bottom). Plates widen and spread out toward the bottom.
-const ROW_Y   := [599.0, 714.0, 845.0]
+const ROW_Y   := [636.0, 756.0, 880.0]
 const COL_X   := [[127.0, 270.0, 410.0], [110.0, 270.0, 430.0], [95.0, 270.0, 445.0]]
 const PLATE_W := [135.0, 150.0, 165.0]
 const PLATE_H := [100.0, 110.0, 130.0]
 const HIT_SHARE := 0.45          # click area = this share of the plate size
 const DEBUG_SLOTS := false     # draws a thin outline on every plate: use it to calibrate, then set false
 
-const GATE_BAR_Y := 528.0        # gate health bar, between the gate wall and the plates
+const GATE_BAR_Y := 546.0        # gate health bar, between the gate wall and the plates
 
 
 
@@ -83,15 +83,12 @@ static func road_edges(y: float) -> Vector2:
 	return Vector2(Persp.screen_x(0.0, y), Persp.screen_x(SCREEN_W, y))
 
 
-# picks the road image that matches how damaged the gate is
-static func road_texture(gate_hp: int, gate_max: int) -> Texture2D:
-	var pct := float(gate_hp) / gate_max * 100.0
-	if pct <= 30.0:
-		return ROAD_30
-	if pct <= 50.0:
-		return ROAD_50
-	if pct <= 90.0:
-		return ROAD_90
+const ROAD_DEST_Y := -245.0
+const ROAD_DEST_H := 1205.0
+
+
+# keeps the sci-fi road consistent without switching to old grass assets
+static func road_texture(_gate_hp: int, _gate_max: int) -> Texture2D:
 	return ROAD_FULL
 
 
@@ -100,8 +97,8 @@ static func road_texture(gate_hp: int, gate_max: int) -> Texture2D:
 static func draw(ci: CanvasItem, gate_hp: int, gate_max: int) -> void:
 	ci.draw_rect(Rect2(0, 0, SCREEN_W, SCREEN_H), Color("1b1f2a"))
 
-	# road art: scaled to the screen width, shifted up so its gate wall lands on GATE_Y
-	ci.draw_texture_rect(ROAD_FULL, Rect2(0.0, GATE_Y - 525.0, 540.0, 959.5), false)
+	# tall road art: covers the entire screen from the bottom plates up through the cosmic vortex
+	ci.draw_texture_rect(ROAD_FULL, Rect2(0.0, ROAD_DEST_Y, SCREEN_W, ROAD_DEST_H), false)
 
 	# gate health bar (rounded, same shape as the wave bar)
 	var bar_w := 240.0

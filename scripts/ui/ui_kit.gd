@@ -49,7 +49,7 @@ static func skin_button(b: Button) -> void:
 
 
 # every button: same skin, same size (BTN_SIZE). Only the position and text change.
-static func make_button(parent: Node, text: String, pos: Vector2, font_size: int = BTN_FONT) -> Button:
+static func make_button(parent: Node, text: String, pos: Vector2, font_size: int = BTN_FONT, custom_size: Vector2 = Vector2.ZERO) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.add_theme_font_size_override("font_size", font_size)
@@ -57,7 +57,7 @@ static func make_button(parent: Node, text: String, pos: Vector2, font_size: int
 	b.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.5))
 	skin_button(b)                       # skin first, then size
 	b.position = pos
-	b.size = BTN_SIZE
+	b.size = custom_size if custom_size != Vector2.ZERO else BTN_SIZE
 	parent.add_child(b)
 	b.pressed.connect(Audio.click)
 	return b
