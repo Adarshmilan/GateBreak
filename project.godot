@@ -10,16 +10,18 @@ config_version=5
 
 [application]
 
-config/name="New Game Project"
+config/name="ZOMHEX"
 run/main_scene="uid://bq3huk364skd3"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
+config/quit_on_go_back=false
 
 [autoload]
 
 GameData="*uid://br23qoidjinky"
 Audio="*uid://n0rseq6rpr3h"
 Haptics="*uid://c0vswqep63fty"
+ZombieFrames="*res://scripts/core/zombie_frames.gd"
 
 [display]
 

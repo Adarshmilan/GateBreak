@@ -1,4 +1,4 @@
-# hud.gd -> res://scripts/ui/hud.gd
+# hud.gd -> res://scripts/core/hud.gd
 # Everything the player reads or taps during a round: labels, BUY button, banner, result panel.
 # It only shows what game.gd tells it to show; it never changes game state itself.
 class_name Hud
@@ -12,7 +12,7 @@ var top_bar: TextureRect
 const BTN_NORMAL := UI + "btn_normal.png"
 const BTN_PRESSED := UI + "btn_pressed.png"
 const BTN_DISABLE := UI + "btn_disable.png"
-var gold_label: Label	
+var gold_label: Label
 var gate_label: Label
 var level_label: Label
 var wave_label: Label
@@ -68,7 +68,6 @@ func _ready() -> void:
 	buy_btn.pressed.connect(func(): buy_pressed.emit())
 	buy_btn.pressed.connect(Audio.click)
 	add_child(buy_btn)
-	_skin_button(buy_btn, BTN_NORMAL, BTN_PRESSED, BTN_DISABLE)
 
 	over_panel = Control.new()
 	over_panel.size = Vector2(540, 960)          # same design space as the game
@@ -89,9 +88,7 @@ func _ready() -> void:
 
 	primary_btn = _make_button(over_panel, "RETRY", Vector2(120, 520), Vector2(300, 80))
 	secondary_btn = _make_button(over_panel, "UPGRADES", Vector2(120, 630), Vector2(300, 80))
-	_skin_button(primary_btn, BTN_NORMAL, BTN_PRESSED, BTN_DISABLE)
-	_skin_button(secondary_btn, BTN_NORMAL, BTN_PRESSED, BTN_DISABLE)
-	
+
 	primary_btn.pressed.connect(func():
 		get_tree().paused = false
 		get_tree().reload_current_scene())
@@ -184,16 +181,6 @@ func _make_image(parent: Node, path: String, pos: Vector2, img_size: Vector2) ->
 	t.size = img_size
 	parent.add_child(t)
 	return t
-
-
-# panel image + a label centered on it
-func _make_panel(path: String, pos: Vector2, panel_size: Vector2, font_size: int) -> Label:
-	var img := _make_image(self, path, pos, panel_size)
-	var l := _make_label(img, Vector2.ZERO, font_size)
-	l.size = panel_size
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	return l
 
 
 func _skin_button(b: Button, normal: String, pressed: String, disabled: String) -> void:
@@ -344,7 +331,7 @@ func _build_pause_menu() -> void:
 	pause_panel.add_child(dim)
 
 	var art := Control.new()
-	art.size = Vector2(1050, 700)                          # the image's own size
+	art.size = Vector2(612, 408)                           # the image's own size
 	art.scale = Vector2(PAUSE_SCALE, PAUSE_SCALE)
 	art.position = Vector2((540.0 - 612.0 * PAUSE_SCALE) / 2.0, PAUSE_Y)
 	pause_panel.add_child(art)
@@ -399,15 +386,34 @@ func _go_home() -> void:
 	get_tree().change_scene_to_file("res://scenes/menu.tscn")
 
 
-# phone back button / Esc also opens and closes the pause menu
+# Esc (desktop) and the phone's back button open and close the pause menu
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel") and not over_panel.visible:
-		if pause_panel.visible:
-			close_pause()
-		else:
-			open_pause()
+	if event.is_action_pressed("ui_cancel"):
+		_toggle_pause()
 
-# called by game.gd: same scale/position as the game, top bar pinned to the screen top
+
+var _last_toggle_frame := -1
+
+func _toggle_pause() -> void:
+	if over_panel.visible:
+		return
+	var frame := Engine.get_process_frames()
+	if frame == _last_toggle_frame:
+		return                       # back button and Esc can arrive in the same frame
+	_last_toggle_frame = frame
+	if pause_panel.visible:
+		close_pause()
+	else:
+		open_pause()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:          # Android back button
+		_toggle_pause()
+	elif what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		if is_node_ready() and OS.has_feature("mobile"):
+			open_pause()                                # app went to the background: freeze the round
+
 # called by game.gd: same scale/position as the game, top bar and pause button pinned to the screen top
 func apply_layout(f: float, pos: Vector2, extra_top: float, safe_top: float) -> void:
 	scale = Vector2(f, f)

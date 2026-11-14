@@ -215,6 +215,8 @@ func _detect_barrel(clip: float) -> Array:
 func _apply_toon(root: Node) -> void:
 	for n in root.find_children("*", "MeshInstance3D", true, false):
 		var mi := n as MeshInstance3D
+		if mi.mesh == null:
+			continue
 		for s in mi.mesh.get_surface_count():
 			var orig := mi.get_active_material(s)
 			var mat := ShaderMaterial.new()
@@ -237,6 +239,8 @@ func _model_aabb(root: Node3D) -> AABB:
 	var to_root := root.global_transform.affine_inverse()
 	for n in root.find_children("*", "MeshInstance3D", true, false):
 		var mi := n as MeshInstance3D
+		if mi.mesh == null:
+			continue
 		var b: AABB = to_root * mi.global_transform * mi.get_aabb()
 		if first:
 			result = b
@@ -314,7 +318,8 @@ func _process(delta: float) -> void:
 	var p := Projectile.new()
 	p.target = target
 	p.damage = damage()
-	p.global_position = to_global(muzzle)
+	# bullets live next to the towers (in game units); convert the muzzle from this tower's space
+	p.position = get_parent().to_local(to_global(muzzle))
 	get_parent().add_child(p)
 	Audio.shoot()
 	cooldown = (1.0 / FIRE_RATE) * randf_range(0.8, 1.25)   # slightly different rhythm each shot
@@ -375,8 +380,6 @@ func _burst() -> void:
 	get_tree().create_timer(1.0).timeout.connect(p.queue_free)
 
 
-# the fixed cartoon base: fills the grid slot and never rotates
-# round dark-metal platform with a glowing ring in the level colour (fixed, never rotates)
 # hexagon metal base with a glowing ring in the level colour (fixed, never rotates)
 func _draw() -> void:
 	var col: Color = BASE_COLORS[clampi(level - 1, 0, BASE_COLORS.size() - 1)]

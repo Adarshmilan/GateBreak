@@ -1,8 +1,9 @@
-# game_data.gd  (REPLACE)  -> already an AUTOLOAD named "GameData"
+# game_data.gd -> AUTOLOAD named "GameData": coins, level progress and upgrades, saved to disk
 extends Node
 
 const SAVE_PATH := "user://save.json"
 const MAX_UPGRADE := 10
+const GATE_HP_PER_UPGRADE := 6     # gate HP added per "gate" upgrade level (the upgrades page shows this)
 
 var coins := 0
 var level := 1            # the level the PLAY button starts (next to play)
@@ -28,7 +29,7 @@ func damage_mult() -> float:
 	return 1.0 + 0.10 * upgrades["damage"]
 
 func gate_bonus() -> int:
-	return 2 * upgrades["gate"]
+	return GATE_HP_PER_UPGRADE * upgrades["gate"]
 
 func gold_mult() -> float:
 	return 1.0 + 0.10 * upgrades["gold"]
@@ -58,13 +59,17 @@ func load_game() -> void:
 	if not FileAccess.file_exists(SAVE_PATH):
 		return
 	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if f == null:
+		return
 	var data = JSON.parse_string(f.get_as_text())
 	if typeof(data) != TYPE_DICTIONARY:
+		push_warning("save file is damaged, starting fresh")
 		return
-	coins = int(data.get("coins", 0))
+	coins = maxi(0, int(data.get("coins", 0)))
 	level = maxi(1, int(data.get("level", 1)))
-	best_level = int(data.get("best_level", 0))
-	fail_streak = int(data.get("fail_streak", 0))
-	var u: Dictionary = data.get("upgrades", {})
-	for k in upgrades.keys():
-		upgrades[k] = int(u.get(k, 0))
+	best_level = maxi(0, int(data.get("best_level", 0)))
+	fail_streak = maxi(0, int(data.get("fail_streak", 0)))
+	var u = data.get("upgrades", {})
+	if typeof(u) == TYPE_DICTIONARY:
+		for k in upgrades.keys():
+			upgrades[k] = clampi(int(u.get(k, 0)), 0, MAX_UPGRADE)

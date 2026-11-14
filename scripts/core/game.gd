@@ -24,7 +24,7 @@ func _ready() -> void:
 	var assist_stacks := GameData.fail_streak
 	assist = LevelConfig.assist_amount(assist_stacks)
 	gold = LevelConfig.start_gold(lvl, assist_stacks)
-	gate_max = LevelConfig.gate_hp(lvl) + int(GameData.gate_bonus() * LevelConfig.GATE_HP_MULT)
+	gate_max = LevelConfig.gate_hp(lvl) + GameData.gate_bonus()
 	gate_hp = gate_max
 
 	hud = Hud.new()
@@ -53,7 +53,7 @@ func _ready() -> void:
 
 	director.start()
 	_update_ui()
-	Audio.play_music(Audio.MUSIC_MENU)
+	Audio.play_music(Audio.MUSIC_GAME)
 
 
 # fit the 540x960 game to this phone's screen (HUD follows the same transform)
@@ -85,7 +85,13 @@ func tower_cost() -> int:
 func _update_ui() -> void:
 	var left := maxi(0, int(ceil(LevelConfig.ROUND_TIME - director.elapsed)))
 	hud.refresh(gold, gate_hp, lvl, director.wave, left, tower_cost())
-	queue_redraw()
+
+
+# the background only changes when the gate bar does, so redraw it only then
+func _set_gate_hp(v: int) -> void:
+	if v != gate_hp:
+		gate_hp = v
+		queue_redraw()
 
 
 # ---------------------------------------------------------------- buying
@@ -108,7 +114,7 @@ func _on_wave_started(w: int) -> void:
 	if w > 1:
 		# reward + a little repair between waves
 		gold += LevelConfig.wave_bonus_gold(lvl)
-		gate_hp = mini(gate_max, gate_hp + int(ceil(gate_max * LevelConfig.GATE_HEAL_BETWEEN_WAVES)))
+		_set_gate_hp(mini(gate_max, gate_hp + int(ceil(gate_max * LevelConfig.GATE_HEAL_BETWEEN_WAVES))))
 	hud.show_banner("FINAL WAVE!" if w == LevelConfig.WAVES else "WAVE %d" % w)
 	_update_ui()
 
@@ -128,7 +134,7 @@ func _on_zombie_died(z: Zombie) -> void:
 func _on_gate_hit(z: Zombie) -> void:
 	if over:
 		return
-	gate_hp = maxi(gate_hp - z.gate_damage, 0)
+	_set_gate_hp(maxi(gate_hp - z.gate_damage, 0))
 	_update_ui()
 	if gate_hp <= 0:
 		_game_over()

@@ -67,8 +67,7 @@ func _fit() -> void:
 	var vs := get_viewport().get_visible_rect().size
 	if vs.x <= 0 or vs.y <= 0:
 		return
-	bg.size = vs
-	bg.position = Vector2.ZERO
+	# bg fills the screen through its anchors; the holder copies its "cover" scaling.
 	# Exact scale used by STRETCH_KEEP_ASPECT_COVERED
 	var s := maxf(vs.x / DESIGN.x, vs.y / DESIGN.y)
 	holder.scale = Vector2(s, s)
@@ -95,3 +94,9 @@ func _build_stats() -> void:
 func _slot_on_screen(slot: Rect2, origin: Vector2) -> Rect2:
 	return Rect2(origin + slot.position * STATS_SCALE, slot.size * STATS_SCALE)
 
+
+# Android back button on the main menu closes the game (the project setting
+# quit_on_go_back is off so that back pauses the game instead of quitting mid-round)
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		get_tree().quit()

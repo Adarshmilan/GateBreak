@@ -2,24 +2,26 @@
 class_name Projectile
 extends Node2D
 
-const SPEED := 700.0
+const SPEED := 700.0      # game units per second (same on every screen size)
 
 var target: Zombie
 var damage := 5.0
 
+# The bullet and its target are both children of the game node, so `position` is in game
+# units for both. (global_position is in screen pixels and changes with the phone's resolution.)
 func _process(delta: float) -> void:
 	scale = Vector2.ONE * Persp.scale_at(position.y)
 	if not is_instance_valid(target) or target.dead:
 		queue_free()
 		return
-	var to := target.global_position - global_position
+	var to := target.position - position
 	rotation = to.angle()   # point the bullet at the zombie
 	var step := SPEED * delta
-	if to.length() <= step + target.radius * 0.5:
+	if to.length() <= step + target.radius * target.scale.x * 0.5:
 		target.take_damage(damage)
 		queue_free()
 	else:
-		global_position += to.normalized() * step
+		position += to.normalized() * step
 
 func _draw() -> void:
 	# bullet pointing right (+x); the rotation above turns it toward the target

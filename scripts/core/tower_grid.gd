@@ -71,6 +71,10 @@ func _input(event: InputEvent) -> void:
 	if not active or dragging == null:
 		return
 	if event is InputEventMouseMotion:
+		# the release can be missed (e.g. game paused mid-drag), so drop as soon as nothing is held
+		if not (event.button_mask & MOUSE_BUTTON_MASK_LEFT):
+			_drop()
+			return
 		dragging.position = _pointer()
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
 		_drop()

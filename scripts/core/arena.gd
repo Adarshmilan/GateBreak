@@ -6,22 +6,14 @@ extends RefCounted
 
 const GATE_Y := 520.0
 const ZOMBIE_STOP_Y := 482.0     # where the zombies' FEET stop (the gate wall). Lower number = they stop higher up
-const ROAD_FULL := preload("res://assets/road.jpg")     # above 90%
-const ROAD_90   := preload("res://assets/gate30.png")   # 90% and below
-const ROAD_50   := preload("res://assets/gate50.png")   # 50% and below
-const ROAD_30   := preload("res://assets/gate90.png")   # 30% and below
+const ROAD_FULL := preload("res://assets/road.jpg")     # the tall background art (road + gate + plates)
 const SCREEN_W := 540.0
 const SCREEN_H := 960.0
 const LANE_X := [90.0, 270.0, 450.0]
 const SPAWN_Y := 60.0
 const SLOT_COUNT := 9
 
-
-# kept so other scripts that mention them still work
-const GRID_Y := 650.0
-const GRID_STEP := 100.0
-const SLOT_W := 58.0
-const SLOT_H := 50.0
+const SLOT_W := 58.0             # base gun size unit (tower.gd scales the gun from it)
 
 
 # ---- SLOTS: centres of the 9 plates in the background art (screen pixels) ----
@@ -87,11 +79,6 @@ const ROAD_DEST_Y := -245.0
 const ROAD_DEST_H := 1205.0
 
 
-# keeps the sci-fi road consistent without switching to old grass assets
-static func road_texture(_gate_hp: int, _gate_max: int) -> Texture2D:
-	return ROAD_FULL
-
-
 # Call from a node's _draw():  Arena.draw(self, gate_hp, gate_max)
 @warning_ignore("integer_division")
 static func draw(ci: CanvasItem, gate_hp: int, gate_max: int) -> void:
@@ -105,7 +92,7 @@ static func draw(ci: CanvasItem, gate_hp: int, gate_max: int) -> void:
 	var bar_h := 12.0
 	var bar_x := (SCREEN_W - bar_w) / 2.0
 	_round_bar(ci, Rect2(bar_x, GATE_BAR_Y, bar_w, bar_h), Color(0.25, 0.06, 0.06))   # empty track
-	var fill_w := bar_w * float(gate_hp) / gate_max
+	var fill_w := bar_w * clampf(float(gate_hp) / maxf(gate_max, 1.0), 0.0, 1.0)
 	if fill_w > 0.0:
 		_round_bar(ci, Rect2(bar_x, GATE_BAR_Y, fill_w, bar_h), Color(0.88, 0.25, 0.25))   # health
 

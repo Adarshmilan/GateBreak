@@ -1,4 +1,6 @@
 # zombie.gd -> res://scripts/entities/zombie.gd (no scene needed, created via Zombie.new())
+# The look comes from ZombieFrames: pre-rendered images when available (fast), otherwise a
+# live 3D render of the model (slow fallback). Camera / model settings live in zombie_frames.gd.
 class_name Zombie
 extends Node2D
 
@@ -17,26 +19,13 @@ const KINDS := [
 	{"name": "Boss",   "model": 3, "hp": 12.0, "speed": 0.6,  "radius": 40.0, "tint": Color(1.0, 0.35, 0.35), "gate_damage": 5, "reward": 8.0},
 ]
 
-# ---- model look (tune these) ----
-const MODEL_PATH := "res://assets/zombies/zombie_%d/zombie_%d.glb"
-# turn each MODEL so its face points at the camera (try 90, 180, -90)
-const MODEL_YAW := {2: 0.0, 3: 0.0}
+# ---- size on screen (tune these) ----
 # size dial per MODEL (raise one if it looks small next to the other)
 const SIZE_MULT := {2: 1.0, 3: 1.0}
 const HEIGHT_PER_RADIUS := 3.4     # on-screen height = radius x this
 const FEET_DROP := 0.9
-const VIEW_PX := 192
-const CAMERA_SIZE := 4.0           # raise if a zombie is cut off at the edges
-const MODEL_H := 2.0
-const MODEL_W := 2.8
-const CAM_ELEVATION := 30.0
-const CAM_TARGET_Y := 1.0
 const FALL_TIME := 0.45
 const LIE_TIME := 1.0
-const TOON_SHADER := preload("res://shaders/gun_toon.gdshader")
-const OUTLINE_SHADER := preload("res://shaders/gun_outline.gdshader")
-
-static var _scenes := {}
 
 var flash_frames := 0
 var kind := 1
@@ -55,15 +44,24 @@ var attacking := false
 var attack_timer := 0.0
 var lane_x := 270.0
 
-var _viewport: SubViewport
-var _fall: Node3D
 var _sprite: Sprite2D
 var _sprite_y := 0.0
 var _top_y := -60.0
-var _anim: AnimationPlayer
-var _walk := ""
-var _attack := ""
+var _animated := false             # false = the model has no walk animation: waddle instead
 var _t := randf() * 10.0
+
+# pre-rendered look (fast path)
+var _frames := {}
+var _clip: Array = []              # images of the loop being played
+var _clip_len := 1.0               # seconds the loop lasts
+var _clip_t := 0.0
+var _anim_speed := 1.0
+
+# live 3D look (fallback)
+var _viewport: SubViewport
+var _fall: Node3D
+var _anim: AnimationPlayer
+var _attack := ""
 
 
 func setup(new_kind: int, base_hp: float, base_speed: float) -> void:
@@ -82,15 +80,13 @@ func setup(new_kind: int, base_hp: float, base_speed: float) -> void:
 func _ready() -> void:
 	hp = max_hp
 	add_to_group("zombies")
-	_build_model()
+	_anim_speed = clampf(speed / 45.0, 0.6, 1.6)
+	_frames = ZombieFrames.get_frames(model_id)
+	if not _frames.is_empty():
+		_build_baked()
+	else:
+		_build_live()
 	_update_scale()
-
-
-static func _get_scene(m: int) -> PackedScene:
-	if not _scenes.has(m):
-		var path := MODEL_PATH % [m, m]
-		_scenes[m] = load(path) if ResourceLoader.exists(path) else null
-	return _scenes[m]
 
 
 # finds the blood layer; creates one if the game doesn't have it yet
@@ -103,152 +99,57 @@ func _blood() -> BloodLayer:
 	return b
 
 
-func _build_model() -> void:
-	var scene := _get_scene(model_id)
-	if scene == null:
-		return   # model missing: coloured circle fallback in _draw()
-
-	_viewport = SubViewport.new()
-	_viewport.size = Vector2i(VIEW_PX, VIEW_PX)
-	_viewport.transparent_bg = true
-	_viewport.own_world_3d = true
-	_viewport.msaa_3d = Viewport.MSAA_2X
-	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	add_child(_viewport)
-
-	var elev := deg_to_rad(CAM_ELEVATION)
-	var cam := Camera3D.new()
-	cam.projection = Camera3D.PROJECTION_ORTHOGONAL
-	cam.size = CAMERA_SIZE
-	_viewport.add_child(cam)
-	var dist := 6.0
-	cam.look_at_from_position(
-		Vector3(0.0, CAM_TARGET_Y + dist * tan(elev), dist), Vector3(0.0, CAM_TARGET_Y, 0.0))
-
-	var light := DirectionalLight3D.new()
-	light.rotation_degrees = Vector3(-50, 0, 0)
-	light.light_energy = 1.2
-	_viewport.add_child(light)
-
-	var env := Environment.new()
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color.WHITE
-	env.ambient_light_energy = 0.55
-	cam.environment = env
-
-	_fall = Node3D.new()
-	_viewport.add_child(_fall)
-	var holder := Node3D.new()
-	_fall.add_child(holder)
-	holder.rotation_degrees.y = float(MODEL_YAW[model_id])
-	var model: Node3D = scene.instantiate()
-	holder.add_child(model)
-
-	var box := _model_aabb(model)
-	var fitted_h := MODEL_H
-	if box.size.y > 0.001:
-		var wide := maxf(box.size.x, box.size.z)
-		var k := MODEL_H / box.size.y
-		if wide > 0.001:
-			k = minf(k, MODEL_W / wide)
-		model.scale = Vector3.ONE * k
-		model.position = -Vector3(box.get_center().x, box.position.y, box.get_center().z) * k
-		fitted_h = box.size.y * k
-
-	_apply_toon(model)
-
-	var ppu := radius * HEIGHT_PER_RADIUS * float(SIZE_MULT[model_id]) / MODEL_H
+# the sprite that shows the zombie, sized and placed so the feet sit on our position
+func _make_sprite(tex: Texture2D, fitted_h: float) -> void:
+	var elev := deg_to_rad(ZombieFrames.CAM_ELEVATION)
+	var ppu := radius * HEIGHT_PER_RADIUS * float(SIZE_MULT.get(model_id, 1.0)) / ZombieFrames.MODEL_H
 	_sprite = Sprite2D.new()
-	_sprite.texture = _viewport.get_texture()
+	_sprite.texture = tex
 	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	_sprite.scale = Vector2.ONE * (CAMERA_SIZE * ppu / VIEW_PX)
+	_sprite.scale = Vector2.ONE * (ZombieFrames.CAMERA_SIZE * ppu / ZombieFrames.VIEW_PX)
 	_sprite.self_modulate = tint
-	_sprite_y = radius * FEET_DROP - ppu * CAM_TARGET_Y * cos(elev)
+	_sprite_y = radius * FEET_DROP - ppu * ZombieFrames.CAM_TARGET_Y * cos(elev)
 	_sprite.position = Vector2(0.0, _sprite_y)
 	_top_y = radius * FEET_DROP - fitted_h * ppu * cos(elev)
 	add_child(_sprite)
 
-	_setup_animations(model)
+
+func _build_baked() -> void:
+	_animated = _frames["animated"]
+	_play_clip("walk")
+	_clip_t = randf() * _clip_len                 # zombies don't step in sync
+	_make_sprite(_clip[0], _frames["fitted_h"])
+	_show_clip_frame()
 
 
-func _apply_toon(root: Node) -> void:
-	for n in root.find_children("*", "MeshInstance3D", true, false):
-		var mi := n as MeshInstance3D
-		if mi.mesh == null:
-			continue
-		for s in mi.mesh.get_surface_count():
-			var orig := mi.get_active_material(s)
-			var mat := ShaderMaterial.new()
-			mat.shader = TOON_SHADER
-			mat.set_shader_parameter("clip_y", -100.0)
-			mat.set_shader_parameter("smooth_lod", 0.7)
-			mat.set_shader_parameter("saturation", 1.5)
-			if orig is BaseMaterial3D:
-				var bm := orig as BaseMaterial3D
-				if bm.albedo_texture != null:
-					mat.set_shader_parameter("albedo_tex", bm.albedo_texture)
-				mat.set_shader_parameter("tint", bm.albedo_color)
-			var line := ShaderMaterial.new()
-			line.shader = OUTLINE_SHADER
-			line.set_shader_parameter("width", 0.03)
-			line.set_shader_parameter("clip_y", -100.0)
-			mat.next_pass = line
-			mi.set_surface_override_material(s, mat)
+func _play_clip(key: String) -> void:
+	_clip = _frames[key]
+	_clip_len = _frames[key + "_len"]
+	_clip_t = 0.0
 
 
-func _setup_animations(model: Node) -> void:
-	var players := model.find_children("*", "AnimationPlayer", true, false)
-	if players.is_empty():
-		print("zombie model ", model_id, ": no animations (using waddle)")
-		return
-	_anim = players[0]
-	var names: Array = []
-	for n in _anim.get_animation_list():
-		if String(n).to_lower() != "reset":
-			names.append(String(n))
-	print("zombie model ", model_id, " animations: ", names)
-
-	_attack = _pick(names, ["attack", "punch", "bite", "swing", "hit"])
-	_walk = _pick(names, ["walk", "run", "move", "shamble", "crawl"])
-	if _walk == "":
-		for n in names:
-			var low := String(n).to_lower()
-			if n != _attack and not low.contains("death") and not low.contains("die"):
-				_walk = n
-				break
-	if _walk != "":
-		_anim.get_animation(_walk).loop_mode = Animation.LOOP_LINEAR
-		_anim.speed_scale = clampf(speed / 45.0, 0.6, 1.6)
-		_anim.seek(randf() * _anim.get_animation(_walk).length)   # zombies don't step in sync
-		_anim.play(_walk)
-	if _attack != "":
-		_anim.get_animation(_attack).loop_mode = Animation.LOOP_LINEAR
+func _show_clip_frame() -> void:
+	var n := _clip.size()
+	var i := int(_clip_t / _clip_len * n) % n
+	if _sprite.texture != _clip[i]:
+		_sprite.texture = _clip[i]
 
 
-func _pick(names: Array, words: Array) -> String:
-	for n in names:
-		var low := String(n).to_lower()
-		for w in words:
-			if low.contains(w):
-				return n
-	return ""
-
-
-func _model_aabb(root: Node3D) -> AABB:
-	var result := AABB()
-	var first := true
-	var to_root := root.global_transform.affine_inverse()
-	for n in root.find_children("*", "MeshInstance3D", true, false):
-		var mi := n as MeshInstance3D
-		if mi.mesh == null:
-			continue
-		var b: AABB = to_root * mi.global_transform * mi.get_aabb()
-		if first:
-			result = b
-			first = false
-		else:
-			result = result.merge(b)
-	return result
+func _build_live() -> void:
+	var rig := ZombieFrames.build_rig(model_id, self)
+	if rig.is_empty():
+		return   # model missing: coloured circle fallback in _draw()
+	_viewport = rig["viewport"]
+	_fall = rig["fall"]
+	_make_sprite(_viewport.get_texture(), rig["fitted_h"])
+	_anim = rig["anim"]
+	_attack = rig["attack"]
+	var walk: String = rig["walk"]
+	_animated = walk != ""
+	if _animated:
+		_anim.speed_scale = _anim_speed
+		_anim.play(walk)
+		_anim.seek(randf() * _anim.get_animation(walk).length)   # zombies don't step in sync
 
 
 # ------------------------------------------------------------------ gameplay
@@ -262,6 +163,10 @@ func _process(delta: float) -> void:
 				_sprite.modulate = Color.WHITE
 			queue_redraw()
 
+	if _animated and not _frames.is_empty():
+		_clip_t = fmod(_clip_t + delta * _anim_speed, _clip_len)
+		_show_clip_frame()
+
 	if attacking:
 		attack_timer -= delta
 		if attack_timer <= 0.0:
@@ -273,7 +178,7 @@ func _process(delta: float) -> void:
 	_update_scale()
 
 	# no walk animation in the model: waddle and bob
-	if _sprite != null and _walk == "":
+	if _sprite != null and not _animated:
 		_t += delta * speed * 0.22
 		_sprite.rotation = sin(_t) * 0.07
 		_sprite.position.y = _sprite_y - absf(sin(_t)) * 4.0
@@ -286,7 +191,10 @@ func _process(delta: float) -> void:
 		if _sprite != null:
 			_sprite.rotation = 0.0
 			_sprite.position.y = _sprite_y
-		if _anim != null and _attack != "":
+		if not _frames.is_empty():
+			if not _frames["attack"].is_empty():
+				_play_clip("attack")
+		elif _anim != null and _attack != "":
 			_anim.play(_attack)
 
 
@@ -328,10 +236,16 @@ func _die(blood: BloodLayer) -> void:
 	if _sprite != null:
 		_sprite.rotation = 0.0
 		_sprite.position.y = _sprite_y
+		_sprite.modulate = Color.WHITE
 
+	var backwards := randf() < 0.7                 # mostly falls backwards
 	var tw := create_tween()
-	if _fall != null:
-		var dir := -1.0 if randf() < 0.7 else 1.0     # mostly falls backwards
+	if not _frames.is_empty():
+		_clip = _frames["fall_back" if backwards else "fall_fwd"]
+		tw.tween_method(func(u: float): _sprite.texture = _clip[mini(int(u * _clip.size()), _clip.size() - 1)],
+			0.0, 1.0, FALL_TIME)
+	elif _fall != null:
+		var dir := -1.0 if backwards else 1.0
 		tw.tween_property(_fall, "rotation_degrees:x", 90.0 * dir, FALL_TIME) \
 			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		tw.parallel().tween_property(_fall, "rotation_degrees:z", randf_range(-20.0, 20.0), FALL_TIME)
